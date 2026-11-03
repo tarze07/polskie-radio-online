@@ -343,7 +343,7 @@ const STATIONS = [
   {id:"zp", site:"zloteprzeboje.pl", icon:"vinyl",       name:"Radio Złote Przeboje",   genre:"Przeboje lat 70-90",color:"#c9a227", url:"https://radiostream.pl/tuba8936-1.mp3", q:"Złote Przeboje"},
   {id:"357", site:"radio357.pl", icon:"tower",      name:"Radio 357",              genre:"Muzyka / publicystyka",color:"#222", url:"https://stream.radio357.pl/"},
   {id:"rns", site:"nowyswiat.online", icon:"tower",      name:"Radio Nowy Świat",       genre:"Muzyka / publicystyka",color:"#2b7a3d", url:"https://n12.rcs.revma.com/ypqt40u0x1zuv"},
-  {id:"wnet", site:"wnet.fm", icon:"talk",     name:"Radio Wnet",             genre:"Publicystyka / muzyka",color:"#d4202a", url:"https://stream.rcs.revma.com/ye5kghkgcm0uv", q:"Wnet"},
+  {id:"wnet", site:"wnet.fm", icon:"talk",     name:"Radio Wnet",             genre:"Publicystyka / muzyka",color:"#d4202a", q:"Wnet"},  // adres wyszukiwany w Radio Browser (poprzedni stały adres wskazywał na Radio 357)
   {id:"maryja", site:"radiomaryja.pl", icon:"faith",   name:"Radio Maryja",           genre:"Religijne",         color:"#1f4e9c", url:"https://radiomaryja.fastcast4u.com/proxy/radiomaryja?mp=/1"},
   // Stacje muzyczne bez stałego adresu — strumień wyszukiwany w katalogu Radio Browser (po nazwie)
   {id:"chopin", site:"chopin.polskieradio.pl", icon:"classic", name:"Polskie Radio Chopin", genre:"Muzyka klasyczna",   color:"#5b3a8c", q:"Chopin"},
@@ -373,6 +373,8 @@ const store = {
 };
 let favs = new Set(store.get("favs", []));
 const urlCache = store.get("urlCache", {});
+// Jednorazowa poprawka: usuń zapamiętany strumień Wnet, jeśli to był błędny adres (Radio 357)
+if (!store.get("fix-wnet-1", false)){ delete urlCache.wnet; store.set("urlCache", urlCache); store.set("fix-wnet-1", true); }
 const logoOk = {};
 const logoUrl = s => `https://www.google.com/s2/favicons?sz=128&domain=${s.site}`;
 const DEFAULT_ORDER = STATIONS.map(s => s.id);
