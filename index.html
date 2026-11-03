@@ -120,6 +120,30 @@ body.amp-mode.amp-light{background:radial-gradient(ellipse at 50% 30%,#ffffff,#e
 .amp.dark .hw,.amp.dark .power,.amp.dark .nudge{background:linear-gradient(180deg,#45484e,#26282c);box-shadow:0 3px 0 #0c0d0e,0 4px 8px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.15);color:#ccc}
 .amp.dark .hw:active,.amp.dark .power.on,.amp.dark .power:active{box-shadow:0 1px 0 #0c0d0e,inset 0 1px 0 rgba(255,255,255,.15)}
 .amp.dark .hw svg,.amp.dark .power svg{stroke:#c9ccd1}
+
+/* Przełącznik wskaźników (analog / LED) */
+.tsw{position:relative;width:84px;height:40px;border:0;border-radius:10px;cursor:pointer;padding:0;
+  background:linear-gradient(180deg,#2a2b2e,#141516);box-shadow:inset 0 2px 5px rgba(0,0,0,.8),0 1px 0 rgba(255,255,255,.6)}
+.amp.dark .tsw{box-shadow:inset 0 2px 5px #000,0 1px 0 rgba(255,255,255,.12)}
+.tsw-ico{position:absolute;top:0;bottom:0;width:42px;display:grid;place-items:center}
+.tsw-ico.a{left:0}.tsw-ico.d{right:0}
+.tsw-ico svg{width:18px;height:18px;fill:none;stroke:#6b6f75;stroke-width:2.2;stroke-linecap:round;transition:stroke .2s}
+.tsw[aria-checked="false"] .tsw-ico.a svg{stroke:#ffcf86}
+.tsw[aria-checked="true"] .tsw-ico.d svg{stroke:#46ff6e}
+.tsw i{position:absolute;top:4px;left:46px;width:34px;height:32px;border-radius:7px;transition:transform .2s cubic-bezier(.3,1.3,.5,1);
+  background:linear-gradient(180deg,#fafafa,#c4c7cc 45%,#9ea2a8 55%,#d9dbdf);box-shadow:0 2px 4px rgba(0,0,0,.6),inset 0 1px 0 #fff;}
+.tsw[aria-checked="true"] i{transform:translateX(-42px)}
+.tsw:focus-visible{outline:3px solid #ff8a3d;outline-offset:3px}
+
+/* Wskaźniki LED */
+.led{display:none;width:100%;aspect-ratio:200/120;border-radius:3px;padding:7px 8px;gap:4px;background:#070807;
+  grid-auto-flow:column;grid-auto-columns:1fr}
+.amp.led-mode .vu svg{display:none}
+.amp.led-mode .led{display:grid}
+.lcol{display:flex;flex-direction:column-reverse;gap:2px}
+.lseg{flex:1;border-radius:1.5px;background:var(--lc);opacity:.13;transition:opacity .07s}
+.lseg.on{opacity:1;box-shadow:0 0 6px var(--lc)}
+.lseg.pk{opacity:1}
 .amp.dark .power.on svg{stroke:#ff3b1f}
 .amp.dark .lamp::before{background:#3a0f0a}
 .amp.dark .lamp.on::before{background:#ff3b1f}
@@ -233,6 +257,7 @@ body:not(.amp-on) .dial-glass{opacity:.25}
         <div class="hw-row">
           <button class="hw" id="ampList" title="Lista stacji" aria-label="Przełącz na listę stacji"><svg viewBox="0 0 24 24"><use href="#i-list"/></svg></button>
           <button class="hw" id="ampTheme" title="Jasna / ciemna obudowa" aria-label="Przełącz kolor obudowy"><svg viewBox="0 0 24 24"><use href="#i-sun"/></svg></button>
+          <button class="tsw" id="vuSwitch" role="switch" aria-checked="false" title="Wskaźniki: analogowe / LED" aria-label="Przełącz wskaźniki VU na diodowe"><span class="tsw-ico a"><svg viewBox="0 0 24 24"><path d="M4 16a8 8 0 0 1 16 0"/><path d="m12 16 3-6"/></svg></span><span class="tsw-ico d"><svg viewBox="0 0 24 24"><path d="M6 20v-6M10 20V8M14 20v-9M18 20V5"/></svg></span><i></i></button>
         </div>
         <div class="lamps">
           <span class="lamp" id="lampPow" title="Zasilanie"></span>
@@ -570,6 +595,57 @@ document.addEventListener("keydown", e => {
   $("#vuR").innerHTML = vuSvg("R");
   const needles = [$("#vuL .needle"), $("#vuR .needle")];
 
+  // Diodowe słupki: 9 pasm × 14 diod na kanał (zielone → żółte → czerwone)
+  const BANDS = 9, SEGS = 14;
+  const ledCols = [[], []];
+  ["#vuL", "#vuR"].forEach((sel, ch) => {
+    const box = document.createElement("div");
+    box.className = "led";
+    for (let b = 0; b < BANDS; b++){
+      const col = document.createElement("div"); col.className = "lcol";
+      const segs = [];
+      for (let k = 0; k < SEGS; k++){
+        const d = document.createElement("span"); d.className = "lseg";
+        d.style.setProperty("--lc", k >= SEGS - 2 ? "#ff2a1a" : k >= SEGS - 5 ? "#ffd21a" : "#2bff5a");
+        col.appendChild(d); segs.push(d);
+      }
+      box.appendChild(col);
+      ledCols[ch].push({segs, lit: 0, lv: 0, peak: 0, hold: 0, pkShown: -1});
+    }
+    $(sel).appendChild(box);
+  });
+  function drawLeds(on, v){
+    for (let ch = 0; ch < 2; ch++) ledCols[ch].forEach((c, b) => {
+      const shape = 1.05 - b * .055;                        // niskie tony mocniejsze
+      const jitter = .55 + .45 * Math.random() * Math.random() + (Math.random() < .07 ? .35 : 0);
+      const target = on ? Math.min(1, lv[ch] * shape * jitter * 1.15) : 0;
+      c.lv += (target - c.lv) * (target > c.lv ? .6 : .14);
+      const lit = Math.round(c.lv * SEGS);
+      if (lit !== c.lit){
+        for (let k = Math.min(lit, c.lit); k < Math.max(lit, c.lit); k++) c.segs[k].classList.toggle("on", k < lit);
+        c.lit = lit;
+      }
+      // szczytowa dioda zatrzymuje się na chwilę i opada
+      if (lit >= c.peak){ c.peak = lit; c.hold = 28; } else if (c.hold > 0) c.hold--; else if (c.peak > 0) c.peak -= .25;
+      const pk = Math.ceil(c.peak) - 1;
+      if (pk !== c.pkShown){
+        if (c.pkShown >= 0) c.segs[c.pkShown].classList.remove("pk");
+        if (pk >= lit && pk >= 0) c.segs[pk].classList.add("pk");
+        c.pkShown = pk >= lit ? pk : -1;
+      }
+    });
+  }
+
+  const vuSwitch = $("#vuSwitch");
+  function setVuMode(led, save){
+    amp.classList.toggle("led-mode", led);
+    vuSwitch.setAttribute("aria-checked", led);
+    vuSwitch.setAttribute("aria-label", led ? "Przełącz wskaźniki VU na analogowe" : "Przełącz wskaźniki VU na diodowe");
+    if (save) store.set("vuMode", led ? "led" : "analog");
+  }
+  vuSwitch.onclick = () => setVuMode(!amp.classList.contains("led-mode"), true);
+  setVuMode(store.get("vuMode", "analog") === "led", false);
+
   const freqOf = s => 88 + (STATIONS.indexOf(s) + .5) * (20 / STATIONS.length);
   const pctOf = f => (f - 87.5) / 21 * 100;
   function buildDial(){
@@ -614,6 +690,7 @@ document.addEventListener("keydown", e => {
       lv[i] += (target - lv[i]) * (target > lv[i] ? .35 : .12);
       needles[i].setAttribute("transform", `rotate(${ang(Math.max(0, lv[i]))} 100 138)`);
     }
+    if (amp.classList.contains("led-mode")) drawLeds(on, v);
     raf = document.body.classList.contains("amp-mode") ? requestAnimationFrame(frame) : null;
   }
 
