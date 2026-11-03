@@ -43,9 +43,9 @@ main{max-width:1100px;margin:0 auto;padding:16px;display:grid;grid-template-colu
 .logo.has-img > svg{display:none}
 .ico{width:1em;height:1em;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;vertical-align:-.125em}
 .eq{display:none;position:absolute;inset:0;border-radius:inherit;background:linear-gradient(135deg,var(--c),color-mix(in srgb,var(--c) 55%,#000));align-items:flex-end;justify-content:center;gap:3px;padding:14px 0}
-.eq i{width:4px;background:#fff;border-radius:2px;animation:eq 1s ease-in-out infinite}
+.eq i{width:4px;height:100%;background:#fff;border-radius:2px;transform-origin:50% 100%;animation:eq 1s ease-in-out infinite;will-change:transform}
 .eq i:nth-child(2){animation-delay:-.4s}.eq i:nth-child(3){animation-delay:-.7s}.eq i:nth-child(4){animation-delay:-.2s}
-@keyframes eq{0%,100%{height:20%}50%{height:100%}}
+@keyframes eq{0%,100%{transform:scaleY(.2)}50%{transform:scaleY(1)}}
 body.playing .card.active .eq{display:flex}
 .info{min-width:0;flex:1}
 .name{font-weight:650;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -138,12 +138,19 @@ body.amp-mode.amp-light{background:radial-gradient(ellipse at 50% 30%,#ffffff,#e
 /* Wskaźniki LED */
 .led{display:none;width:100%;aspect-ratio:200/120;border-radius:3px;padding:7px 8px;gap:4px;background:#070807;
   grid-auto-flow:column;grid-auto-columns:1fr}
-.amp.led-mode .vu svg{display:none}
+.amp.led-mode .vu .vface{display:none}
+.vface{position:relative;width:100%;overflow:hidden;border-radius:3px}
+.vface svg{position:relative}
+.vu .needle{position:absolute;z-index:1;left:50%;top:26.67%;height:88.33%;width:4px;margin-left:-2px;background:linear-gradient(90deg,transparent 1.1px,#111 1.1px 2.9px,transparent 2.9px);outline:1px solid transparent;backface-visibility:hidden;
+  transform-origin:50% 100%;transform:rotate(-48deg);will-change:transform}
 .amp.led-mode .led{display:grid}
-.lcol{display:flex;flex-direction:column-reverse;gap:2px}
-.lseg{flex:1;border-radius:1.5px;background:var(--lc);opacity:.13;transition:opacity .07s}
-.lseg.on{opacity:1;box-shadow:0 0 6px var(--lc)}
-.lseg.pk{opacity:1}
+.lcol{position:relative;contain:strict}
+.lstack{position:absolute;inset:0;display:flex;flex-direction:column-reverse;gap:2px}
+.lstack.off{opacity:.13}
+.lwrap{position:absolute;inset:0;overflow:hidden;transform:translateY(100%);will-change:transform}
+.lwrap .lstack{transform:translateY(-100%);will-change:transform}
+.lseg{flex:1;border-radius:1.5px;background:var(--lc)}
+.lpk{position:absolute;left:0;right:0;bottom:0;border-radius:1.5px;opacity:0;will-change:transform}
 .amp.dark .power.on svg{stroke:#ff3b1f}
 .amp.dark .lamp::before{background:#3a0f0a}
 .amp.dark .lamp.on::before{background:#ff3b1f}
@@ -577,7 +584,7 @@ document.addEventListener("keydown", e => {
       if (["-20","-10","-5","-3","0","+1","+3"].includes(lab)) marks += `<text x="${tx}" y="${ty}" font-size="9" text-anchor="middle" fill="${red ? "#c4161c" : "#222"}" font-family="Arial" font-weight="700">${lab.replace("-","−")}</text>`;
     }
     const [a1,b1] = pt(.78, R - 2), [a2,b2] = pt(1, R - 2), [c1,d1] = pt(0, R - 2);
-    return `<svg viewBox="0 0 200 120" aria-hidden="true">
+    return `<div class="vface"><i class="needle"></i><svg viewBox="0 0 200 120" aria-hidden="true">
       <defs><radialGradient id="vg${ch}" cx="50%" cy="85%" r="85%"><stop offset="0" stop-color="#fff6d8"/><stop offset=".7" stop-color="#f3dfa6"/><stop offset="1" stop-color="#cfae62"/></radialGradient></defs>
       <rect width="200" height="120" fill="url(#vg${ch})"/>
       <path d="M${c1} ${d1} A${R-2} ${R-2} 0 0 1 ${a1} ${b1}" fill="none" stroke="#222" stroke-width="1.3"/>
@@ -585,56 +592,63 @@ document.addEventListener("keydown", e => {
       ${marks}
       <text x="100" y="84" font-size="17" text-anchor="middle" font-family="Georgia,serif" font-style="italic" fill="#333">VU</text>
       <text x="18" y="110" font-size="11" font-family="Arial" font-weight="700" fill="#555">${ch}</text>
-      <line class="needle" x1="${cx}" y1="${cy}" x2="${cx}" y2="${cy - R - 2}" stroke="#111" stroke-width="1.6" transform="rotate(-48 ${cx} ${cy})"/>
       <circle cx="${cx}" cy="${cy}" r="16" fill="#222"/>
       <rect width="200" height="120" fill="url(#vg${ch})" opacity="0" />
       <rect y="0" width="200" height="40" fill="#fff" opacity=".12"/>
-    </svg>`;
+    </svg></div>`;
   }
   $("#vuL").innerHTML = vuSvg("L");
   $("#vuR").innerHTML = vuSvg("R");
   const needles = [$("#vuL .needle"), $("#vuR .needle")];
 
-  // Diodowe słupki: 9 pasm × 14 diod na kanał (zielone → żółte → czerwone)
+  // Diodowe słupki: 9 pasm × 14 diod na kanał (zielone → żółte → czerwone).
+  // Każdy słupek to dwie warstwy diod (zgaszona i zapalona); zmienia się tylko przycięcie
+  // zapalonej warstwy, więc na klatkę aktualizujemy 18 elementów zamiast setek.
   const BANDS = 9, SEGS = 14;
+  const segColor = k => k >= SEGS - 2 ? "#ff2a1a" : k >= SEGS - 5 ? "#ffd21a" : "#2bff5a";
+  const stackHtml = cls => `<div class="lstack ${cls}">` + Array.from({length: SEGS}, (_, k) => `<span class="lseg" style="--lc:${segColor(k)}"></span>`).join("") + "</div>";
   const ledCols = [[], []];
   ["#vuL", "#vuR"].forEach((sel, ch) => {
     const box = document.createElement("div");
     box.className = "led";
     for (let b = 0; b < BANDS; b++){
       const col = document.createElement("div"); col.className = "lcol";
-      const segs = [];
-      for (let k = 0; k < SEGS; k++){
-        const d = document.createElement("span"); d.className = "lseg";
-        d.style.setProperty("--lc", k >= SEGS - 2 ? "#ff2a1a" : k >= SEGS - 5 ? "#ffd21a" : "#2bff5a");
-        col.appendChild(d); segs.push(d);
-      }
+      col.innerHTML = stackHtml("off") + '<div class="lwrap">' + stackHtml("lit") + '</div><span class="lpk"></span>';
       box.appendChild(col);
-      ledCols[ch].push({segs, lit: 0, lv: 0, peak: 0, hold: 0, pkShown: -1});
+      ledCols[ch].push({col, litEl: col.querySelector(".lwrap"), litIn: col.querySelector(".lit"), pkEl: col.querySelector(".lpk"), lit: -1, lv: 0, peak: 0, hold: 0, pkShown: -2});
     }
     $(sel).appendChild(box);
   });
-  function drawLeds(on, v){
+  let segH = 0;
+  function drawLeds(on){
     for (let ch = 0; ch < 2; ch++) ledCols[ch].forEach((c, b) => {
       const shape = 1.05 - b * .055;                        // niskie tony mocniejsze
-      const jitter = .55 + .45 * Math.random() * Math.random() + (Math.random() < .07 ? .35 : 0);
+      const jitter = .55 + .45 * Math.random() * Math.random() + (Math.random() < .12 ? .35 : 0);
       const target = on ? Math.min(1, lv[ch] * shape * jitter * 1.15) : 0;
-      c.lv += (target - c.lv) * (target > c.lv ? .6 : .14);
+      c.lv += (target - c.lv) * (target > c.lv ? .75 : .25);
       const lit = Math.round(c.lv * SEGS);
       if (lit !== c.lit){
-        for (let k = Math.min(lit, c.lit); k < Math.max(lit, c.lit); k++) c.segs[k].classList.toggle("on", k < lit);
+        const off = (1 - lit / SEGS) * 100;   // przesuwamy okno w dół, a diody w górę — tylko transformacje, bez przerysowania
+        c.litEl.style.transform = `translateY(${off}%)`;
+        c.litIn.style.transform = `translateY(${-off}%)`;
         c.lit = lit;
       }
       // szczytowa dioda zatrzymuje się na chwilę i opada
-      if (lit >= c.peak){ c.peak = lit; c.hold = 28; } else if (c.hold > 0) c.hold--; else if (c.peak > 0) c.peak -= .25;
+      if (lit >= c.peak){ c.peak = lit; c.hold = 14; } else if (c.hold > 0) c.hold--; else if (c.peak > 0) c.peak -= .5;
       const pk = Math.ceil(c.peak) - 1;
-      if (pk !== c.pkShown){
-        if (c.pkShown >= 0) c.segs[c.pkShown].classList.remove("pk");
-        if (pk >= lit && pk >= 0) c.segs[pk].classList.add("pk");
-        c.pkShown = pk >= lit ? pk : -1;
+      const show = pk >= lit && pk >= 0 ? pk : -1;
+      if (show !== c.pkShown){
+        if (show < 0) c.pkEl.style.opacity = 0;
+        else {
+          if (!segH) segH = c.col.clientHeight;
+          const h = (segH - 2 * (SEGS - 1)) / SEGS;
+          c.pkEl.style.cssText = `opacity:1;height:${h}px;background:${segColor(show)};transform:translateY(${-show * (h + 2)}px)`;
+        }
+        c.pkShown = show;
       }
     });
   }
+  addEventListener("resize", () => { segH = 0; for (const c of ledCols.flat()) c.pkShown = -2; });
 
   const vuSwitch = $("#vuSwitch");
   function setVuMode(led, save){
@@ -643,7 +657,7 @@ document.addEventListener("keydown", e => {
     vuSwitch.setAttribute("aria-label", led ? "Przełącz wskaźniki VU na analogowe" : "Przełącz wskaźniki VU na diodowe");
     if (save) store.set("vuMode", led ? "led" : "analog");
   }
-  vuSwitch.onclick = () => setVuMode(!amp.classList.contains("led-mode"), true);
+  vuSwitch.onclick = () => { setVuMode(!amp.classList.contains("led-mode"), true); lastAng = [null, null]; ampKick(); };
   setVuMode(store.get("vuMode", "analog") === "led", false);
 
   const freqOf = s => 88 + (STATIONS.indexOf(s) + .5) * (20 / STATIONS.length);
@@ -661,6 +675,7 @@ document.addEventListener("keydown", e => {
 
   let preview = null;
   window.ampSync = (statusText) => {
+    if (window.ampKick) ampKick();
     const s = preview || current;
     const on = document.body.classList.contains("playing");
     document.body.classList.toggle("amp-on", on);
@@ -677,22 +692,35 @@ document.addEventListener("keydown", e => {
   };
 
   // Wskazówki VU — symulacja z balistyką prawdziwego miernika
-  let lv = [0, 0], t0 = performance.now(), kick = [0, 0], raf = null;
+  let lv = [0, 0], t0 = performance.now(), kick = [0, 0], raf = null, lastT = 0, lastAng = [null, null];
+  // Pętla animacji: ok. 30 klatek/s, działa tylko w widoku wzmacniacza
+  // i zatrzymuje się sama, gdy radio nie gra, a wskaźniki już opadły.
   function frame(t){
+    raf = null;
+    if (!document.body.classList.contains("amp-mode")) return;
+    if (t - lastT < 32){ raf = requestAnimationFrame(frame); return; }
+    lastT = t;
     const on = document.body.classList.contains("playing");
     const v = +$("#vol").value;
     const time = (t - t0) / 1000;
+    const led = amp.classList.contains("led-mode");
     for (let i = 0; i < 2; i++){
-      if (Math.random() < .06) kick[i] = .15 + Math.random() * .25;
-      kick[i] *= .9;
+      if (Math.random() < .1) kick[i] = .15 + Math.random() * .25;
+      kick[i] *= .82;
       const music = .5 + .12 * Math.sin(time * 2.1 + i) + .08 * Math.sin(time * 5.3 + i * 2) + .06 * Math.sin(time * 11.7 + i * 3) + kick[i];
       const target = on ? Math.min(1.04, music * (.35 + .75 * v)) : 0;
-      lv[i] += (target - lv[i]) * (target > lv[i] ? .35 : .12);
-      needles[i].setAttribute("transform", `rotate(${ang(Math.max(0, lv[i]))} 100 138)`);
+      lv[i] += (target - lv[i]) * (target > lv[i] ? .55 : .22);
+      if (!on && lv[i] < .002) lv[i] = 0;
+      if (!led){
+        const a = Math.round(ang(Math.max(0, lv[i])) * 4) / 4;   // co 0,25°
+        if (a !== lastAng[i]){ needles[i].style.transform = `rotate(${a}deg)`; lastAng[i] = a; }
+      }
     }
-    if (amp.classList.contains("led-mode")) drawLeds(on, v);
-    raf = document.body.classList.contains("amp-mode") ? requestAnimationFrame(frame) : null;
+    if (led) drawLeds(on);
+    const idle = !on && lv[0] === 0 && lv[1] === 0 && ledCols.flat().every(c => c.lit <= 0 && c.pkShown < 0);
+    if (!idle) raf = requestAnimationFrame(frame);
   }
+  window.ampKick = () => { if (!raf && document.body.classList.contains("amp-mode")) raf = requestAnimationFrame(frame); };
 
   function setView(isAmp){
     document.body.classList.toggle("amp-mode", isAmp);
@@ -700,7 +728,7 @@ document.addEventListener("keydown", e => {
     viewBtn.querySelector("use").setAttribute("href", isAmp ? "#i-list" : "#i-amp");
     viewBtn.querySelector("span").textContent = isAmp ? "Lista stacji" : "Wzmacniacz";
     store.set("view", isAmp ? "amp" : "list");
-    if (isAmp){ buildDial(); ampSync(); if (!raf) raf = requestAnimationFrame(frame); }
+    if (isAmp){ buildDial(); ampSync(); lastAng = [null, null]; ampKick(); }
   }
   viewBtn.onclick = () => setView(!document.body.classList.contains("amp-mode"));
   $("#ampList").onclick = () => setView(false);
