@@ -116,6 +116,7 @@ const urlCache = store.get("urlCache", {});
 
 function initials(n){
   const w = n.replace(/^(Polskie Radio|Radio)\s+/i, "").split(/\s+/);
+  if (/^[A-Z0-9]{2,4}$/.test(w[0])) return w[0];
   return (w.length > 1 ? w[0][0] + w[1][0] : w[0].slice(0,3)).toUpperCase();
 }
 
