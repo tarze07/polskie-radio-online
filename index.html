@@ -92,15 +92,13 @@ body.amp-mode{padding:0;min-height:100vh;min-height:100dvh;display:grid;place-it
 .amp{display:none;width:100%;max-width:1000px;margin:0 auto;padding:16px}
 body.amp-mode .amp{display:block}
 .amp-case{padding:14px;border-radius:18px;
-  background:
-    repeating-linear-gradient(92deg,rgba(0,0,0,.0) 0 6px,rgba(0,0,0,.12) 7px,rgba(0,0,0,0) 9px 15px),
-    repeating-linear-gradient(88deg,rgba(255,255,255,.05) 0 2px,transparent 3px 22px),
-    linear-gradient(180deg,#7a4523,#5a2f15 55%,#3f200d);
+  --wood:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='800' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.003 0.09' numOctaves='3' seed='7' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.9 -0.3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  --grain:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.5 0 0 0 0 0.5 0 0 0 0 0.5 0 0 0 0.09 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E");
+  background:var(--wood),linear-gradient(180deg,#8a5129,#6a3a1a 55%,#4a260f);
   box-shadow:0 18px 40px rgba(0,0,0,.35),inset 0 2px 0 rgba(255,255,255,.18),inset 0 -3px 0 rgba(0,0,0,.35)}
 .amp-face{border-radius:8px;padding:18px 22px 22px;color:#2a2a2a;
   background:
-    repeating-linear-gradient(90deg,rgba(255,255,255,.18) 0 1px,rgba(0,0,0,.035) 1px 2px,transparent 2px 3px),
-    linear-gradient(180deg,#e9eaec,#c9ccd1 48%,#b3b7bd);
+    var(--grain),linear-gradient(180deg,#eceef0,#d3d6da 50%,#bfc3c8);
   box-shadow:inset 0 1px 0 #fff,inset 0 -2px 4px rgba(0,0,0,.25),0 0 0 2px #2b1608}
 .amp-top{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:16px}
 .hw-row{display:flex;gap:10px}
@@ -113,13 +111,10 @@ body.amp-mode .amp{display:block}
 body.amp-mode.amp-dark{background:radial-gradient(ellipse at 50% 30%,#2a2c31,#0e0f11 70%)}
 body.amp-mode.amp-light{background:radial-gradient(ellipse at 50% 30%,#ffffff,#e4e6ea 70%)}
 /* Ciemna obudowa */
-.amp.dark .amp-case{background:
-    repeating-linear-gradient(92deg,rgba(0,0,0,0) 0 6px,rgba(0,0,0,.18) 7px,rgba(0,0,0,0) 9px 15px),
-    linear-gradient(180deg,#3a2216,#24140b 55%,#160b05)}
+.amp.dark .amp-case{background:var(--wood),linear-gradient(180deg,#432818,#2b170c 55%,#1a0d06)}
 .amp.dark .amp-face{
   background:
-    repeating-linear-gradient(90deg,rgba(255,255,255,.035) 0 1px,rgba(0,0,0,.08) 1px 2px,transparent 2px 3px),
-    linear-gradient(180deg,#34363b,#1f2023 48%,#151618);
+    var(--grain),linear-gradient(180deg,#323438,#222327 50%,#18191b);
   box-shadow:inset 0 1px 0 rgba(255,255,255,.12),inset 0 -2px 4px rgba(0,0,0,.6),0 0 0 2px #0b0603}
 .amp.dark .vu,.amp.dark .vfd,.amp.dark .dial{box-shadow:inset 0 2px 8px #000,0 1px 0 rgba(255,255,255,.1)}
 .amp.dark .hw,.amp.dark .power,.amp.dark .nudge{background:linear-gradient(180deg,#45484e,#26282c);box-shadow:0 3px 0 #0c0d0e,0 4px 8px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.15);color:#ccc}
@@ -151,24 +146,30 @@ body:not(.amp-on) .dial-glass{opacity:.25}
 .tnum{position:absolute;bottom:4px;transform:translateX(-50%);font:600 .7rem Arial,sans-serif;color:#ffd79a;text-shadow:0 0 4px rgba(255,170,60,.8)}
 .smark{position:absolute;top:8px;width:5px;height:5px;margin-left:-2px;border-radius:50%;background:#ffcf86;opacity:.55}
 .dneedle{position:absolute;top:3px;bottom:3px;width:3px;margin-left:-1px;background:#ff2a14;box-shadow:0 0 6px rgba(255,40,20,.9);transition:left .6s cubic-bezier(.3,1.4,.5,1)}
-.amp-bottom{display:flex;align-items:center;justify-content:space-between;gap:18px;margin-top:20px;flex-wrap:wrap}
+.amp-bottom{display:grid;grid-template-columns:auto 1.5fr 1fr;align-items:center;gap:24px;margin-top:22px}
+.ctl.tune,.ctl.volc{flex-direction:row;gap:10px}
+.vic{flex:none;width:18px;height:18px;fill:none;stroke:#555;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.amp.dark .vic{stroke:#9a9ea5}
+.fader{-webkit-appearance:none;appearance:none;flex:1;min-width:0;height:44px;background:transparent;cursor:pointer;margin:0;touch-action:pan-y}
+.fader:focus{outline:none}
+.fader::-webkit-slider-runnable-track{height:8px;border-radius:4px;background:#1c1d1f;box-shadow:inset 0 2px 3px rgba(0,0,0,.8),0 1px 0 rgba(255,255,255,.7)}
+.fader::-moz-range-track{height:8px;border-radius:4px;background:#1c1d1f;box-shadow:inset 0 2px 3px rgba(0,0,0,.8),0 1px 0 rgba(255,255,255,.7)}
+.fader::-webkit-slider-thumb{-webkit-appearance:none;width:26px;height:42px;margin-top:-17px;border-radius:5px;border:0;
+  background:linear-gradient(90deg,transparent 11px,#d11 11px 15px,transparent 15px),linear-gradient(180deg,#fafafa,#c4c7cc 45%,#9ea2a8 55%,#d9dbdf);
+  box-shadow:0 4px 8px rgba(0,0,0,.4),0 1px 0 #7d8187,inset 0 1px 0 #fff}
+.fader::-moz-range-thumb{width:26px;height:42px;border-radius:5px;border:0;
+  background:linear-gradient(90deg,transparent 11px,#d11 11px 15px,transparent 15px),linear-gradient(180deg,#fafafa,#c4c7cc 45%,#9ea2a8 55%,#d9dbdf);
+  box-shadow:0 4px 8px rgba(0,0,0,.4),0 1px 0 #7d8187,inset 0 1px 0 #fff}
+.fader:focus-visible::-webkit-slider-thumb{outline:3px solid #ff8a3d;outline-offset:2px}
+.fader:focus-visible::-moz-range-thumb{outline:3px solid #ff8a3d;outline-offset:2px}
+.amp.dark .fader::-webkit-slider-runnable-track{background:#050505;box-shadow:inset 0 2px 3px #000,0 1px 0 rgba(255,255,255,.12)}
+.amp.dark .fader::-moz-range-track{background:#050505;box-shadow:inset 0 2px 3px #000,0 1px 0 rgba(255,255,255,.12)}
 .ctl{display:flex;flex-direction:column;align-items:center;gap:8px}
 .power{width:58px;height:58px;border-radius:12px;border:0;cursor:pointer;display:grid;place-items:center;
   background:linear-gradient(180deg,#f4f4f4,#bfc2c7);box-shadow:0 3px 0 #7d8187,0 5px 10px rgba(0,0,0,.3),inset 0 1px 0 #fff}
 .power:active,.power.on{transform:translateY(2px);box-shadow:0 1px 0 #7d8187,0 2px 5px rgba(0,0,0,.3),inset 0 1px 0 #fff}
 .power svg{width:26px;height:26px;stroke:#555;fill:none;stroke-width:2.4;stroke-linecap:round}
 .power.on svg{stroke:#e0281a;filter:drop-shadow(0 0 4px rgba(255,40,20,.7))}
-.knob-row{display:flex;align-items:center;gap:10px}
-.knob{position:relative;border-radius:50%;cursor:grab;touch-action:none;border:0;padding:0;
-  background:repeating-conic-gradient(#8e9298 0 4deg,#d7d9dd 4deg 8deg);
-  box-shadow:0 6px 14px rgba(0,0,0,.4),0 2px 0 #6b6f75,inset 0 0 0 1px rgba(0,0,0,.25)}
-.knob .cap{position:absolute;inset:9%;border-radius:50%;
-  background:conic-gradient(from 0deg,#f6f6f6,#a8acb2 25%,#f2f2f2 50%,#9ea2a8 75%,#f6f6f6);
-  box-shadow:inset 0 2px 3px rgba(255,255,255,.8),inset 0 -3px 5px rgba(0,0,0,.25)}
-.knob .mark{position:absolute;left:50%;top:10%;width:4px;height:22%;margin-left:-2px;border-radius:2px;background:#d11}
-.knob.big{width:110px;height:110px}
-.knob.small{width:74px;height:74px}
-.knob:focus-visible{outline:3px solid #ff8a3d;outline-offset:4px}
 .nudge{width:34px;height:34px;border-radius:50%;border:0;cursor:pointer;background:linear-gradient(180deg,#f4f4f4,#bfc2c7);box-shadow:0 2px 0 #7d8187,inset 0 1px 0 #fff;color:#333;font-size:.8rem}
 .nudge:active{transform:translateY(1px);box-shadow:0 1px 0 #7d8187}
 .vol-scale{font:600 .6rem Arial,sans-serif;color:#555;display:flex;justify-content:space-between;width:130px;letter-spacing:.1em}
@@ -177,8 +178,8 @@ body:not(.amp-on) .dial-glass{opacity:.25}
   .amp-mid{grid-template-columns:1fr 1fr}
   .center{grid-column:1/-1;order:-1}
   .amp-face{padding:14px}
-  .knob.big{width:92px;height:92px}.knob.small{width:62px;height:62px}
-  .amp-bottom{justify-content:space-around}
+  .amp-bottom{grid-template-columns:auto 1fr;gap:16px 14px}
+  .ctl.volc{grid-column:1/-1}
 }
 </style>
 </head>
@@ -249,15 +250,15 @@ body:not(.amp-on) .dial-glass{opacity:.25}
       </div>
       <div class="amp-bottom">
         <div class="ctl"><button class="power" id="power" title="Zasilanie" aria-label="Zasilanie: włącz lub wyłącz radio"><svg viewBox="0 0 24 24"><path d="M12 3v8"/><path d="M6.3 6.8a8 8 0 1 0 11.4 0"/></svg></button></div>
-        <div class="ctl">
-          <div class="knob-row">
-            <button class="nudge" id="tunePrev" aria-label="Poprzednia stacja">◀</button>
-            <button class="knob small" id="tuneKnob" title="Strojenie" aria-label="Strojenie: przeciągnij lub użyj strzałek, aby zmienić stację"><span class="cap"></span><span class="mark"></span></button>
-            <button class="nudge" id="tuneNext" aria-label="Następna stacja">▶</button>
-          </div>
+        <div class="ctl tune">
+          <button class="nudge" id="tunePrev" title="Poprzednia stacja" aria-label="Poprzednia stacja">◀</button>
+          <input class="fader" id="tuneSlider" type="range" min="0" max="1" step="1" value="0" title="Strojenie" aria-label="Strojenie (wybór stacji)">
+          <button class="nudge" id="tuneNext" title="Następna stacja" aria-label="Następna stacja">▶</button>
         </div>
-        <div class="ctl">
-          <button class="knob big" id="volKnob" title="Głośność" role="slider" aria-label="Głośność" aria-valuemin="0" aria-valuemax="100"><span class="cap"></span><span class="mark"></span></button>
+        <div class="ctl volc">
+          <svg class="vic" viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5 6 9H2v6h4l5 4z"/></svg>
+          <input class="fader" id="ampVol" type="range" min="0" max="1" step="0.01" title="Głośność" aria-label="Głośność">
+          <svg class="vic" viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5 6 9H2v6h4l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M19 5a10 10 0 0 1 0 14"/></svg>
         </div>
       </div>
     </div>
@@ -596,6 +597,7 @@ document.addEventListener("keydown", e => {
     const st = statusText ?? $("#status").textContent;
     $("#vfdStat").textContent = on ? "STEREO ▸ LIVE" : (st && st !== "—" ? st.replace(/…/g, "...").toUpperCase().slice(0, 22) : "STANDBY");
     $("#dneedle").style.left = (s ? pctOf(freqOf(s)) : 0) + "%";
+    if (window.syncTune) syncTune();
   };
 
   // Wskazówki VU — symulacja z balistyką prawdziwego miernika
@@ -645,56 +647,29 @@ document.addEventListener("keydown", e => {
     playBtn.click();
   };
 
-  // Gałka głośności (-135°..135°)
-  const volKnob = $("#volKnob");
-  const vol = $("#vol");
-  const setVol = v => { v = Math.max(0, Math.min(1, v)); vol.value = v; vol.dispatchEvent(new Event("input")); };
-  const showVol = () => {
-    volKnob.style.transform = `rotate(${-135 + 270 * vol.value}deg)`;
-    volKnob.setAttribute("aria-valuenow", Math.round(vol.value * 100));
-  };
-  vol.addEventListener("input", showVol); showVol();
-  function knobDrag(el, onDelta){
-    let last = null;
-    el.addEventListener("pointerdown", e => { e.preventDefault(); el.setPointerCapture(e.pointerId); last = [e.clientX, e.clientY]; el.style.cursor = "grabbing"; });
-    el.addEventListener("pointermove", e => {
-      if (!last) return;
-      const d = (e.clientX - last[0]) - (e.clientY - last[1]);
-      last = [e.clientX, e.clientY]; onDelta(d);
-    });
-    const end = () => { last = null; el.style.cursor = ""; };
-    el.addEventListener("pointerup", end); el.addEventListener("pointercancel", end);
-  }
-  knobDrag(volKnob, d => setVol(+vol.value + d / 220));
-  volKnob.addEventListener("wheel", e => { e.preventDefault(); setVol(+vol.value - Math.sign(e.deltaY) * .04); }, {passive: false});
-  volKnob.addEventListener("keydown", e => {
-    const d = {ArrowUp: .05, ArrowRight: .05, ArrowDown: -.05, ArrowLeft: -.05}[e.key];
-    if (d){ e.preventDefault(); setVol(+vol.value + d); }
-  });
+  // Suwak głośności — zsynchronizowany z suwakiem na dolnym pasku
+  const vol = $("#vol"), ampVol = $("#ampVol");
+  ampVol.value = vol.value;
+  vol.addEventListener("input", () => { ampVol.value = vol.value; });
+  ampVol.addEventListener("input", () => { vol.value = ampVol.value; vol.dispatchEvent(new Event("input")); });
 
-  // Gałka strojenia — przełącza stacje, gra po chwili bezruchu
-  const tuneKnob = $("#tuneKnob");
-  let tuneRot = 0, acc = 0, tuneT;
-  function step(dir){
-    const base = preview || current || STATIONS[0];
-    let i = STATIONS.indexOf(base) + dir;
+  // Suwak strojenia — jedna pozycja = jedna stacja, gra po chwili bezruchu
+  const tune = $("#tuneSlider");
+  let tuneT;
+  function choose(i){
     i = (i + STATIONS.length) % STATIONS.length;
     preview = STATIONS[i];
-    tuneRot += dir * 24; tuneKnob.style.transform = `rotate(${tuneRot}deg)`;
+    tune.value = i;
     ampSync("STROJENIE...");
     clearTimeout(tuneT);
-    tuneT = setTimeout(() => { const s = preview; preview = null; play(s); }, 550);
+    tuneT = setTimeout(() => { const s = preview; preview = null; play(s); }, 600);
   }
-  knobDrag(tuneKnob, d => {
-    acc += d; tuneRot += d * .6; tuneKnob.style.transform = `rotate(${tuneRot}deg)`;
-    while (acc > 40){ acc -= 40; step(1); }
-    while (acc < -40){ acc += 40; step(-1); }
-  });
-  tuneKnob.addEventListener("wheel", e => { e.preventDefault(); step(e.deltaY > 0 ? 1 : -1); }, {passive: false});
-  tuneKnob.addEventListener("keydown", e => {
-    const d = {ArrowUp: 1, ArrowRight: 1, ArrowDown: -1, ArrowLeft: -1}[e.key];
-    if (d){ e.preventDefault(); step(d); }
-  });
+  function step(dir){ choose(STATIONS.indexOf(preview || current || STATIONS[0]) + dir); }
+  tune.addEventListener("input", () => choose(+tune.value));
+  window.syncTune = () => {
+    tune.max = STATIONS.length - 1;
+    if (!preview) tune.value = Math.max(0, STATIONS.indexOf(current));
+  };
   $("#tunePrev").onclick = () => step(-1);
   $("#tuneNext").onclick = () => step(1);
 
