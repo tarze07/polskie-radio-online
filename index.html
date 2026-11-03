@@ -48,6 +48,16 @@ body.playing .card.active .eq{display:flex}
 .fav:hover{color:#f5b400}
 .fav.on{color:#f5b400}
 .fav.on .ico{fill:currentColor}
+.item{position:relative;touch-action:pan-y}
+.item.dragging{z-index:10;pointer-events:none}
+.item.dragging .card{box-shadow:0 12px 30px rgba(0,0,0,.25);border-color:var(--accent);transform:scale(1.03)}
+.grip{position:absolute;bottom:8px;right:8px;background:none;border:0;color:var(--muted);padding:4px;line-height:0;border-radius:8px;cursor:grab;touch-action:none;font-size:1.15rem}
+.grip:hover,.grip:focus-visible{color:var(--text)}
+body.is-dragging,body.is-dragging *{cursor:grabbing!important;user-select:none}
+.toast{position:fixed;left:50%;bottom:96px;transform:translate(-50%,20px);background:var(--text);color:var(--bg);padding:9px 16px;border-radius:10px;font-size:.9rem;opacity:0;pointer-events:none;transition:.25s}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+.hint{color:var(--muted);font-size:.85rem;margin:10px 0 0;display:flex;align-items:center;gap:6px}
+.hint .ico{flex:none}
 .empty{grid-column:1/-1;text-align:center;color:var(--muted);padding:40px}
 .player{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border-top:1px solid var(--border);box-shadow:0 -4px 20px rgba(0,0,0,.08)}
 .player-in{max-width:1100px;margin:0 auto;padding:12px 16px;display:flex;align-items:center;gap:14px}
@@ -70,6 +80,8 @@ footer{max-width:1100px;margin:0 auto;padding:8px 16px;color:var(--muted);font-s
 </head>
 <body>
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-grip" viewBox="0 0 24 24"><circle cx="9" cy="5" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="9" cy="19" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="19" r="1"/></symbol>
+  <symbol id="i-reset" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></symbol>
   <symbol id="i-play" viewBox="0 0 24 24"><path d="M8 5.2v13.6a1 1 0 0 0 1.5.86l11-6.8a1 1 0 0 0 0-1.72l-11-6.8A1 1 0 0 0 8 5.2z"/></symbol>
   <symbol id="i-pause" viewBox="0 0 24 24"><rect x="6" y="4.5" width="4" height="15" rx="1.2"/><rect x="14" y="4.5" width="4" height="15" rx="1.2"/></symbol>
   <symbol id="i-star" viewBox="0 0 24 24"><path d="M12 2.8l2.85 5.78 6.38.93-4.62 4.5 1.09 6.35L12 17.36l-5.7 3 1.09-6.35-4.62-4.5 6.38-.93z"/></symbol>
@@ -96,7 +108,9 @@ footer{max-width:1100px;margin:0 auto;padding:8px 16px;color:var(--muted);font-s
   <div class="tools">
     <label class="search"><svg class="ico"><use href="#i-search"/></svg><input id="q" type="search" placeholder="Szukaj stacji lub gatunku…" aria-label="Szukaj stacji"></label>
     <button class="chip" id="favOnly" aria-pressed="false"><svg class="ico"><use href="#i-star"/></svg>Ulubione</button>
+    <button class="chip" id="reset" title="Przywróć domyślną kolejność stacji"><svg class="ico"><use href="#i-reset"/></svg>Domyślny układ</button>
   </div>
+  <p class="hint"><svg class="ico"><use href="#i-grip"/></svg>Złap uchwyt na kafelku i przeciągnij, aby zmienić kolejność. Ustawienia zapisują się automatycznie w tej przeglądarce.</p>
 </header>
 
 <main id="list"></main>
@@ -115,6 +129,7 @@ footer{max-width:1100px;margin:0 auto;padding:8px 16px;color:var(--muted);font-s
     </div>
   </div>
 </div>
+<div class="toast" id="toast" role="status"></div>
 <audio id="audio" preload="none"></audio>
 
 <script>
@@ -151,6 +166,80 @@ const store = {
 };
 let favs = new Set(store.get("favs", []));
 const urlCache = store.get("urlCache", {});
+const DEFAULT_ORDER = STATIONS.map(s => s.id);
+
+// Kolejność stacji zapisana przez użytkownika (nowe stacje trafiają na koniec)
+function applyOrder(order){
+  const pos = new Map(order.map((id, i) => [id, i]));
+  STATIONS.sort((a, b) => (pos.get(a.id) ?? 1e6 + DEFAULT_ORDER.indexOf(a.id)) - (pos.get(b.id) ?? 1e6 + DEFAULT_ORDER.indexOf(b.id)));
+}
+applyOrder(store.get("order", DEFAULT_ORDER));
+
+let toastT;
+function toast(msg){
+  const t = $("#toast"); t.textContent = msg; t.classList.add("show");
+  clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove("show"), 1600);
+}
+
+function saveSettings(){
+  store.set("favOnly", $("#favOnly").getAttribute("aria-pressed") === "true");
+  store.set("q", $("#q").value);
+  if (current) store.set("last", current.id);
+}
+
+// Zapisuje kolejność na podstawie widocznych kafelków (działa też przy filtrze)
+function commitOrder(){
+  const visible = [...list.querySelectorAll(".item")].map(el => el.dataset.id);
+  const set = new Set(visible);
+  let i = 0;
+  const ids = STATIONS.map(s => set.has(s.id) ? visible[i++] : s.id);
+  applyOrder(ids);
+  store.set("order", ids);
+  toast("Zapisano układ");
+}
+
+// Przeciąganie myszką i palcem (Pointer Events)
+let drag = null;
+function startDrag(e, el){
+  if (e.button > 0) return;
+  e.preventDefault();
+  const r = el.getBoundingClientRect();
+  drag = {el, dx: e.clientX - r.left, dy: e.clientY - r.top, x: e.clientX, y: e.clientY, moved: false};
+  e.target.setPointerCapture(e.pointerId);
+  el.classList.add("dragging");
+  document.body.classList.add("is-dragging");
+}
+function moveDrag(e){
+  if (!drag) return;
+  drag.x = e.clientX; drag.y = e.clientY;
+  const {el} = drag;
+  const over = document.elementFromPoint(e.clientX, e.clientY)?.closest(".item");
+  if (over && over !== el && over.parentNode === list){
+    const items = [...list.children];
+    list.insertBefore(el, items.indexOf(over) > items.indexOf(el) ? over.nextSibling : over);
+    drag.moved = true;
+  }
+  position();
+  if (e.clientY < 70) scrollBy(0, -12);
+  else if (e.clientY > innerHeight - 140) scrollBy(0, 12);
+}
+function position(){
+  const {el} = drag;
+  el.style.transform = "";
+  const r = el.getBoundingClientRect();
+  el.style.transform = `translate(${drag.x - drag.dx - r.left}px, ${drag.y - drag.dy - r.top}px)`;
+}
+function endDrag(){
+  if (!drag) return;
+  drag.el.classList.remove("dragging");
+  drag.el.style.transform = "";
+  document.body.classList.remove("is-dragging");
+  if (drag.moved) commitOrder();
+  drag = null;
+}
+addEventListener("pointermove", moveDrag);
+addEventListener("pointerup", endDrag);
+addEventListener("pointercancel", endDrag);
 
 function render(){
   const q = $("#q").value.trim().toLowerCase();
@@ -161,12 +250,26 @@ function render(){
   list.innerHTML = items.length ? "" : `<div class="empty">Brak stacji${favOnly ? " w ulubionych" : ""}.</div>`;
   for (const s of items){
     const el = document.createElement("div");
+    el.className = "item";
+    el.dataset.id = s.id;
     el.innerHTML = `<button class="card${current?.id === s.id ? " active" : ""}">
         <span class="logo" style="background:linear-gradient(135deg, ${s.color}, color-mix(in srgb, ${s.color} 55%, #000))"><svg class="ico"><use href="#g-${s.icon}"/></svg><span class="eq"><i></i><i></i><i></i><i></i></span></span>
         <span class="info"><div class="name">${s.name}</div><div class="genre">${s.genre}</div></span>
       </button>
-      <button class="fav${favs.has(s.id) ? " on" : ""}" aria-label="Ulubione"><svg class="ico"><use href="#i-star"/></svg></button>`;
-    el.style.position = "relative";
+      <button class="fav${favs.has(s.id) ? " on" : ""}" aria-label="Ulubione"><svg class="ico"><use href="#i-star"/></svg></button>
+      <button class="grip" aria-label="Przenieś ${s.name} (strzałki zmieniają kolejność)" title="Przeciągnij, aby przenieść"><svg class="ico"><use href="#i-grip"/></svg></button>`;
+    const grip = el.querySelector(".grip");
+    grip.onpointerdown = e => startDrag(e, el);
+    grip.onkeydown = e => {
+      const d = {ArrowLeft: -1, ArrowUp: -1, ArrowRight: 1, ArrowDown: 1}[e.key];
+      if (!d) return;
+      e.preventDefault();
+      const sib = d < 0 ? el.previousElementSibling : el.nextElementSibling;
+      if (!sib) return;
+      list.insertBefore(el, d < 0 ? sib : sib.nextSibling);
+      grip.focus();
+      commitOrder();
+    };
     el.querySelector(".card").onclick = () => play(s);
     el.querySelector(".fav").onclick = e => {
       e.stopPropagation();
@@ -200,6 +303,7 @@ function load(url){
 
 async function play(s){
   current = s; triedFallback = false;
+  saveSettings();
   $("#nowName").textContent = s.name;
   playBtn.disabled = false;
   setStatus("Łączenie…");
@@ -246,12 +350,29 @@ vol.value = store.get("vol", 0.8);
 audio.volume = vol.value;
 vol.oninput = () => { audio.volume = vol.value; store.set("vol", +vol.value); };
 
-$("#q").oninput = render;
+$("#q").oninput = () => { saveSettings(); render(); };
 $("#favOnly").onclick = e => {
   const b = e.currentTarget;
   b.setAttribute("aria-pressed", b.getAttribute("aria-pressed") !== "true");
-  render();
+  saveSettings(); render();
 };
+$("#reset").onclick = () => {
+  if (!confirm("Przywrócić domyślną kolejność stacji?")) return;
+  applyOrder(DEFAULT_ORDER);
+  store.set("order", DEFAULT_ORDER);
+  render(); toast("Przywrócono domyślny układ");
+};
+
+// Przywracanie zapisanych ustawień
+$("#favOnly").setAttribute("aria-pressed", store.get("favOnly", false));
+$("#q").value = store.get("q", "");
+const last = STATIONS.find(s => s.id === store.get("last"));
+if (last){
+  current = last;
+  $("#nowName").textContent = last.name;
+  playBtn.disabled = false;
+  setStatus("Naciśnij ▶, aby słuchać");
+}
 document.addEventListener("keydown", e => {
   if (e.code === "Space" && e.target.tagName !== "INPUT"){ e.preventDefault(); playBtn.click(); }
 });
