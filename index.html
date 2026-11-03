@@ -240,6 +240,13 @@ body:not(.amp-on) .dial-glass{opacity:.25}
   <symbol id="g-youth" viewBox="0 0 24 24"><path d="M3 14h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-7a9 9 0 0 1 18 0v7a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3"/></symbol>
   <symbol id="g-vinyl" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6.5"/><circle cx="12" cy="12" r="2"/></symbol>
   <symbol id="g-tower" viewBox="0 0 24 24"><path d="M4.9 16.1C1 12.2 1 5.8 4.9 1.9"/><path d="M7.8 4.7a6.14 6.14 0 0 0-.8 7.5"/><circle cx="12" cy="9" r="2"/><path d="M16.2 4.8c2 2 2.26 5.11.8 7.47"/><path d="M19.1 1.9a9.96 9.96 0 0 1 0 14.1"/><path d="M9.5 18h5"/><path d="m8 22 4-11 4 11"/></symbol>
+  <symbol id="g-jazz" viewBox="0 0 24 24"><path d="m2 2 8 8"/><path d="m22 2-8 8"/><ellipse cx="12" cy="9" rx="10" ry="5"/><path d="M7 13.4v7.9M12 14v8M17 13.4v7.9"/><path d="M2 9v8a10 5 0 0 0 20 0V9"/></symbol>
+  <symbol id="g-kids" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><path d="M9 9h.01M15 9h.01"/></symbol>
+  <symbol id="g-speaker" viewBox="0 0 24 24"><rect x="4" y="2" width="16" height="20" rx="2"/><circle cx="12" cy="14" r="4"/><circle cx="12" cy="6.5" r="1"/></symbol>
+  <symbol id="g-flame" viewBox="0 0 24 24"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.07-2.14-.22-4.05 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.15.43-2.29 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></symbol>
+  <symbol id="g-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></symbol>
+  <symbol id="g-wave" viewBox="0 0 24 24"><path d="M2 13a2 2 0 0 0 2-2V7a2 2 0 0 1 4 0v13a2 2 0 0 0 4 0V4a2 2 0 0 1 4 0v13a2 2 0 0 0 4 0v-4a2 2 0 0 1 2-2"/></symbol>
+  <symbol id="g-tape" viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><circle cx="8" cy="11" r="2"/><circle cx="16" cy="11" r="2"/><path d="M10 11h4"/><path d="m6 19 2-4h8l2 4"/></symbol>
   <symbol id="g-faith" viewBox="0 0 24 24"><path d="M12 2v20M6.5 8h11"/></symbol>
 </svg>
 <header>
@@ -338,6 +345,23 @@ const STATIONS = [
   {id:"rns", site:"nowyswiat.online", icon:"tower",      name:"Radio Nowy Świat",       genre:"Muzyka / publicystyka",color:"#2b7a3d", url:"https://n12.rcs.revma.com/ypqt40u0x1zuv"},
   {id:"wnet", site:"wnet.fm", icon:"talk",     name:"Radio Wnet",             genre:"Publicystyka / muzyka",color:"#d4202a", url:"https://stream.rcs.revma.com/ye5kghkgcm0uv", q:"Wnet"},
   {id:"maryja", site:"radiomaryja.pl", icon:"faith",   name:"Radio Maryja",           genre:"Religijne",         color:"#1f4e9c", url:"https://radiomaryja.fastcast4u.com/proxy/radiomaryja?mp=/1"},
+  // Stacje muzyczne bez stałego adresu — strumień wyszukiwany w katalogu Radio Browser (po nazwie)
+  {id:"chopin", site:"chopin.polskieradio.pl", icon:"classic", name:"Polskie Radio Chopin", genre:"Muzyka klasyczna",   color:"#5b3a8c", q:"Chopin"},
+  {id:"jazz",   site:"radiojazz.fm",           icon:"jazz",    name:"RadioJAZZ.FM",         genre:"Jazz",               color:"#1b3a5c", q:"jazz"},
+  {id:"kampus", site:"radiokampus.fm",         icon:"rock",    name:"Radio Kampus",         genre:"Alternatywa / studenckie", color:"#e5007d", q:"Kampus"},
+  {id:"muzo",   site:"muzo.fm",                icon:"youth",   name:"Muzo.fm",              genre:"Indie / alternatywa",color:"#ff5a1f", q:"Muzo"},
+  {id:"pogoda", site:"radiopogoda.pl",         icon:"vinyl",   name:"Radio Pogoda",         genre:"Evergreeny / oldies",color:"#2a8fd6", q:"Pogoda"},
+  {id:"party",  site:"radioparty.pl",          icon:"dance",   name:"Radio Party",          genre:"Dance / club",       color:"#7b1fa2", q:"Radio Party"},
+  {id:"dzieci", site:"polskieradio.pl",        icon:"kids",    name:"Polskie Radio Dzieciom", genre:"Dla dzieci",       color:"#f2a900", q:"Dzieciom"},
+  // Kanały gatunkowe — najpopularniejsza stacja z danym tagiem (najpierw polska, potem dowolna)
+  {id:"t-discopolo", icon:"dance",   name:"Disco Polo",  genre:"Kanał gatunkowy", color:"#d81b60", tag:"disco polo"},
+  {id:"t-hiphop",    icon:"speaker", name:"Hip-Hop",     genre:"Kanał gatunkowy", color:"#37474f", tag:"hip hop"},
+  {id:"t-metal",     icon:"flame",   name:"Metal",       genre:"Kanał gatunkowy", color:"#3a0d0d", tag:"metal"},
+  {id:"t-reggae",    icon:"sun",     name:"Reggae",      genre:"Kanał gatunkowy", color:"#2e7d32", tag:"reggae"},
+  {id:"t-blues",     icon:"vinyl",   name:"Blues",       genre:"Kanał gatunkowy", color:"#1e40af", tag:"blues"},
+  {id:"t-electro",   icon:"wave",    name:"Elektronika", genre:"Kanał gatunkowy", color:"#00838f", tag:"electronic"},
+  {id:"t-80s",       icon:"tape",    name:"Lata 80.",    genre:"Kanał gatunkowy", color:"#c2185b", tag:"80s"},
+  {id:"t-country",   icon:"pop",     name:"Country",     genre:"Kanał gatunkowy", color:"#8d5524", tag:"country"},
 ];
 
 const $ = s => document.querySelector(s);
@@ -438,12 +462,12 @@ function render(){
     el.className = "item";
     el.dataset.id = s.id;
     el.innerHTML = `<button class="card${current?.id === s.id ? " active" : ""}">
-        <span class="logo${logoOk[s.id] ? " has-img" : ""}" style="--c:${s.color}"><svg class="ico"><use href="#g-${s.icon}"/></svg><img alt="" decoding="async" src="${logoUrl(s)}"><span class="eq"><i></i><i></i><i></i><i></i></span></span>
+        <span class="logo${logoOk[s.id] ? " has-img" : ""}" style="--c:${s.color}"><svg class="ico"><use href="#g-${s.icon}"/></svg>${s.site ? `<img alt="" decoding="async" src="${logoUrl(s)}">` : ""}<span class="eq"><i></i><i></i><i></i><i></i></span></span>
         <span class="info"><div class="name">${s.name}</div><div class="genre">${s.genre}</div></span>
       </button>
       <button class="fav${favs.has(s.id) ? " on" : ""}" aria-label="Ulubione"><svg class="ico"><use href="#i-star"/></svg></button>
       <button class="grip" aria-label="Przenieś ${s.name} (strzałki zmieniają kolejność)" title="Przeciągnij, aby przenieść"><svg class="ico"><use href="#i-grip"/></svg></button>`;
-    const img = el.querySelector(".logo img");
+    const img = el.querySelector(".logo img") || {};
     // Logo stacji; gdy się nie wczyta (albo to tylko domyślna ikonka 16px) — zostaje ikona gatunku
     img.onload = () => { logoOk[s.id] = img.naturalWidth > 16; img.parentNode.classList.toggle("has-img", logoOk[s.id]); };
     img.onerror = () => { logoOk[s.id] = false; img.parentNode.classList.remove("has-img"); };
@@ -494,12 +518,22 @@ function load(url){
 async function play(s){
   current = s; triedFallback = false;
   saveSettings();
-  $("#nowName").textContent = s.name;
+  showName(s);
   playBtn.disabled = false;
   setStatus("Łączenie…");
   render();
   if ("mediaSession" in navigator) navigator.mediaSession.metadata = new MediaMetadata({title: s.name, artist: s.genre});
-  try { await load(urlCache[s.id] || s.url); } catch(e){ if (e.name !== "AbortError") onFail(); }
+  const url = cachedUrl(s) || s.url;
+  if (!url){ onFail(); return; }
+  try { await load(url); } catch(e){ if (e.name !== "AbortError") onFail(); }
+}
+
+// Pamięć znalezionych strumieni: {url, name} (starsze wpisy to sam adres)
+const cachedUrl = s => { const c = urlCache[s.id]; return typeof c === "string" ? c : c?.url; };
+const foundName = s => { const c = urlCache[s.id]; return s.tag && c?.name ? c.name : ""; };
+function showName(s){
+  const n = foundName(s);
+  $("#nowName").textContent = n ? `${s.name} · ${n}` : s.name;
 }
 
 // Gdy podstawowy adres nie działa — szukamy aktualnego strumienia w katalogu Radio Browser
@@ -508,14 +542,22 @@ async function onFail(){
   if (!s) return;
   if (triedFallback){ setStatus("Nie udało się połączyć ze stacją"); return; }
   triedFallback = true;
-  setStatus("Szukam alternatywnego strumienia…");
+  setStatus(s.url || cachedUrl(s) ? "Szukam alternatywnego strumienia…" : "Wyszukiwanie stacji…");
   try {
-    const r = await fetch("https://all.api.radio-browser.info/json/stations/search?" + new URLSearchParams({
-      name: s.q || s.name, countrycode: "PL", hidebroken: "true", order: "clickcount", reverse: "true", limit: "10"}));
-    const found = (await r.json()).map(x => x.url_resolved).find(u => u.startsWith("https://"));
+    const search = async extra => {
+      const r = await fetch("https://all.api.radio-browser.info/json/stations/search?" + new URLSearchParams({
+        ...extra, hidebroken: "true", order: "clickcount", reverse: "true", limit: "15"}));
+      const old = cachedUrl(s);
+      return (await r.json()).find(x => x.url_resolved?.startsWith("https://") && x.url_resolved !== old);
+    };
+    const found = s.tag
+      ? (await search({tag: s.tag, countrycode: "PL"})) || (await search({tag: s.tag}))
+      : await search({name: s.q || s.name, countrycode: "PL"});
     if (!found || current !== s) throw 0;
-    urlCache[s.id] = found; store.set("urlCache", urlCache);
-    await load(found);
+    urlCache[s.id] = {url: found.url_resolved, name: found.name.trim()};
+    store.set("urlCache", urlCache);
+    showName(s);
+    await load(found.url_resolved);
   } catch(e){ if (current === s) setStatus("Nie udało się połączyć ze stacją"); }
 }
 
@@ -560,7 +602,7 @@ $("#q").value = store.get("q", "");
 const last = STATIONS.find(s => s.id === store.get("last"));
 if (last){
   current = last;
-  $("#nowName").textContent = last.name;
+  showName(last);
   playBtn.disabled = false;
   setStatus("Naciśnij ▶, aby słuchać");
 }
@@ -683,7 +725,7 @@ document.addEventListener("keydown", e => {
     $("#lampSt").classList.toggle("on", on);
     $("#lampAir").classList.toggle("on", on);
     $("#power").classList.toggle("on", on);
-    $("#vfdName").textContent = s ? s.name : "— — —";
+    $("#vfdName").textContent = s ? (foundName(s) && !preview ? `${s.name} · ${foundName(s)}` : s.name) : "— — —";
     $("#vfdFreq").textContent = s ? `FM ${freqOf(s).toFixed(1)} MHz` : "FM --.- MHz";
     const st = statusText ?? $("#status").textContent;
     $("#vfdStat").textContent = on ? "STEREO ▸ LIVE" : (st && st !== "—" ? st.replace(/…/g, "...").toUpperCase().slice(0, 22) : "STANDBY");
