@@ -5,7 +5,7 @@ RMF FM, Radio ZET, Polskie Radio (Jedynka, Dwójka, Trójka, Czwórka, PR24), Es
 RMF MAXX, RMF Classic, Antyradio, Chillizet, Meloradio, TOK FM, Złote Przeboje, Radio 357,
 Radio Nowy Świat, Radio Wnet i Radio Maryja.
 
-Funkcje: wyszukiwarka, ulubione, przeciąganie kafelków (mysz, dotyk, klawiatura) z zapisem układu w przeglądarce, regulacja głośności, skrót klawiszowy (spacja),
+Funkcje: widok retro wzmacniacza (wskaźniki VU, skala strojenia, gałki), wyszukiwarka, ulubione, przeciąganie kafelków (mysz, dotyk, klawiatura) z zapisem układu w przeglądarce, regulacja głośności, skrót klawiszowy (spacja),
 obsługa strumieni HLS (hls.js) oraz automatyczne wyszukiwanie zapasowego strumienia
 w katalogu [Radio Browser](https://www.radio-browser.info/), gdy podstawowy adres przestanie działać.
 
