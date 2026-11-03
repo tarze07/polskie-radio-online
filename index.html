@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Radio Online – polskie stacje</title>
+<meta name="description" content="Słuchaj najpopularniejszych polskich stacji radiowych online.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📻</text></svg>">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/hls.js/1.5.13/hls.min.js"></script>
+<style>
+:root{
+  --bg:#f5f6f8; --surface:#fff; --text:#16181d; --muted:#666c78; --border:#e2e5ea;
+  --accent:#dc143c; --accent-text:#fff; --shadow:0 1px 2px rgba(0,0,0,.06),0 4px 14px rgba(0,0,0,.05);
+}
+@media (prefers-color-scheme: dark){
+  :root{--bg:#0f1115;--surface:#181b21;--text:#eceef2;--muted:#9aa1ad;--border:#2a2e37;--accent:#ff4d6a;--accent-text:#fff;--shadow:none}
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--text);padding-bottom:120px}
+header{max-width:1100px;margin:0 auto;padding:28px 16px 8px}
+h1{margin:0 0 4px;font-size:1.8rem;letter-spacing:-.02em}
+h1 span{color:var(--accent)}
+.sub{color:var(--muted);margin:0 0 18px}
+.tools{display:flex;gap:10px;flex-wrap:wrap}
+.tools input{flex:1;min-width:200px;padding:11px 14px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:1rem}
+.chip{padding:10px 14px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--text);cursor:pointer;font-size:.95rem}
+.chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-text)}
+main{max-width:1100px;margin:0 auto;padding:16px;display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:14px}
+.card{position:relative;display:flex;align-items:center;gap:12px;padding:14px;border-radius:14px;background:var(--surface);border:1px solid var(--border);box-shadow:var(--shadow);cursor:pointer;text-align:left;color:inherit;font:inherit;width:100%}
+.card:hover{border-color:var(--accent)}
+.card.active{outline:2px solid var(--accent);outline-offset:-1px}
+.logo{flex:none;width:52px;height:52px;border-radius:12px;display:grid;place-items:center;font-weight:800;color:#fff;font-size:.95rem;letter-spacing:-.02em}
+.info{min-width:0;flex:1}
+.name{font-weight:650;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.genre{color:var(--muted);font-size:.85rem}
+.fav{position:absolute;top:6px;right:8px;background:none;border:0;font-size:1.15rem;cursor:pointer;color:var(--muted);padding:4px}
+.fav.on{color:#f5b400}
+.empty{grid-column:1/-1;text-align:center;color:var(--muted);padding:40px}
+.player{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border-top:1px solid var(--border);box-shadow:0 -4px 20px rgba(0,0,0,.08)}
+.player-in{max-width:1100px;margin:0 auto;padding:12px 16px;display:flex;align-items:center;gap:14px}
+.play{flex:none;width:52px;height:52px;border-radius:50%;border:0;background:var(--accent);color:var(--accent-text);font-size:1.3rem;cursor:pointer}
+.play:disabled{opacity:.4;cursor:default}
+.now{flex:1;min-width:0}
+.now .name{font-size:1.05rem}
+.status{color:var(--muted);font-size:.85rem;display:flex;align-items:center;gap:6px}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--muted)}
+.dot.live{background:#1fbf5f;animation:pulse 1.4s infinite}
+@keyframes pulse{50%{opacity:.35}}
+.vol{display:flex;align-items:center;gap:8px}
+.vol input{width:110px;accent-color:var(--accent)}
+@media (max-width:560px){.vol input{width:70px}.logo{width:44px;height:44px}}
+footer{max-width:1100px;margin:0 auto;padding:8px 16px;color:var(--muted);font-size:.8rem}
+</style>
+</head>
+<body>
+<header>
+  <h1>📻 Radio <span>Online</span></h1>
+  <p class="sub">Najpopularniejsze polskie stacje radiowe — kliknij i słuchaj.</p>
+  <div class="tools">
+    <input id="q" type="search" placeholder="Szukaj stacji lub gatunku…" aria-label="Szukaj stacji">
+    <button class="chip" id="favOnly" aria-pressed="false">★ Ulubione</button>
+  </div>
+</header>
+
+<main id="list"></main>
+<footer>Strumienie pochodzą z oficjalnych serwerów nadawców. Jeśli adres stacji przestanie działać, strona automatycznie spróbuje znaleźć aktualny przez Radio Browser.</footer>
+
+<div class="player">
+  <div class="player-in">
+    <button class="play" id="play" disabled aria-label="Odtwórz">▶</button>
+    <div class="now">
+      <div class="name" id="nowName">Wybierz stację</div>
+      <div class="status"><span class="dot" id="dot"></span><span id="status">—</span></div>
+    </div>
+    <div class="vol">
+      <span aria-hidden="true">🔊</span>
+      <input id="vol" type="range" min="0" max="1" step="0.01" value="0.8" aria-label="Głośność">
+    </div>
+  </div>
+</div>
+<audio id="audio" preload="none"></audio>
+
+<script>
+const STATIONS = [
+  {id:"rmf",      name:"RMF FM",                 genre:"Pop / hity",        color:"#e30613", url:"https://rs6-krk2.rmfstream.pl/RMFFM48"},
+  {id:"zet",      name:"Radio ZET",              genre:"Pop / hity",        color:"#d2001e", url:"https://zt.cdn.eurozet.pl/zet-net.mp3"},
+  {id:"pr1",      name:"Polskie Radio Jedynka",  genre:"Informacje / muzyka",color:"#c8102e", url:"https://stream11.polskieradio.pl/pr1/pr1.sdp/playlist.m3u8", q:"Polskie Radio Program 1"},
+  {id:"pr2",      name:"Polskie Radio Dwójka",   genre:"Klasyka / kultura", color:"#7a3b8f", url:"https://stream12.polskieradio.pl/pr2/pr2.sdp/playlist.m3u8", q:"Polskie Radio Program 2"},
+  {id:"pr3",      name:"Polskie Radio Trójka",   genre:"Rock / alternatywa",color:"#f39200", url:"https://stream13.polskieradio.pl/pr3/pr3.sdp/playlist.m3u8", q:"Polskie Radio Program 3"},
+  {id:"pr4",      name:"Polskie Radio Czwórka",  genre:"Młodzieżowe",       color:"#00a3e0", url:"https://stream14.polskieradio.pl/pr4/pr4.sdp/playlist.m3u8", q:"Polskie Radio Czwórka"},
+  {id:"pr24",     name:"Polskie Radio 24",       genre:"Informacje",        color:"#004b87", url:"https://stream15.polskieradio.pl/pr24/pr24.sdp/playlist.m3u8", q:"Polskie Radio 24"},
+  {id:"eska",     name:"Radio Eska",             genre:"Pop / dance",       color:"#ed1c24", url:"https://ic1.smcdn.pl/2380-1.mp3"},
+  {id:"eskarock", name:"Eska Rock",              genre:"Rock",              color:"#1d1d1b", url:"https://ic1.smcdn.pl/5380-1.mp3"},
+  {id:"vox",      name:"VOX FM",                 genre:"Dance / disco",     color:"#e6007e", url:"https://ic1.smcdn.pl/3990-1.mp3"},
+  {id:"maxx",     name:"RMF MAXX",               genre:"Dance / club",      color:"#ff6a00", url:"https://rs101-krk.rmfstream.pl/rmf_maxxx"},
+  {id:"classic",  name:"RMF Classic",            genre:"Muzyka filmowa",    color:"#8a6d3b", url:"https://rs101-krk.rmfstream.pl/RMFCLASSIC48"},
+  {id:"anty",     name:"Antyradio",              genre:"Rock",              color:"#111111", url:"https://an.cdn.eurozet.pl/ant-waw.mp3"},
+  {id:"chilli",   name:"Chillizet",              genre:"Chillout",          color:"#00a99d", url:"https://ch.cdn.eurozet.pl/chi-net.mp3"},
+  {id:"melo",     name:"Meloradio",              genre:"Ballady / soft",    color:"#9b2d86", url:"https://ml.cdn.eurozet.pl/mel-net.mp3"},
+  {id:"tokfm",    name:"TOK FM",                 genre:"Informacje / talk", color:"#0057a8", url:"https://radiostream.pl/tuba10-1.mp3"},
+  {id:"zp",       name:"Radio Złote Przeboje",   genre:"Przeboje lat 70-90",color:"#c9a227", url:"https://radiostream.pl/tuba8936-1.mp3", q:"Złote Przeboje"},
+  {id:"357",      name:"Radio 357",              genre:"Muzyka / publicystyka",color:"#222", url:"https://stream.radio357.pl/"},
+  {id:"rns",      name:"Radio Nowy Świat",       genre:"Muzyka / publicystyka",color:"#2b7a3d", url:"https://n12.rcs.revma.com/ypqt40u0x1zuv"},
+  {id:"maryja",   name:"Radio Maryja",           genre:"Religijne",         color:"#1f4e9c", url:"https://radiomaryja.fastcast4u.com/proxy/radiomaryja?mp=/1"},
+];
+
+const $ = s => document.querySelector(s);
+const audio = $("#audio"), list = $("#list"), playBtn = $("#play");
+let current = null, hls = null, triedFallback = false;
+const store = {
+  get(k, d){ try { return JSON.parse(localStorage.getItem(k)) ?? d } catch { return d } },
+  set(k, v){ try { localStorage.setItem(k, JSON.stringify(v)) } catch {} }
+};
+let favs = new Set(store.get("favs", []));
+const urlCache = store.get("urlCache", {});
+
+function initials(n){
+  const w = n.replace(/^(Polskie Radio|Radio)\s+/i, "").split(/\s+/);
+  return (w.length > 1 ? w[0][0] + w[1][0] : w[0].slice(0,3)).toUpperCase();
+}
+
+function render(){
+  const q = $("#q").value.trim().toLowerCase();
+  const favOnly = $("#favOnly").getAttribute("aria-pressed") === "true";
+  const items = STATIONS.filter(s =>
+    (!favOnly || favs.has(s.id)) &&
+    (s.name + " " + s.genre).toLowerCase().includes(q));
+  list.innerHTML = items.length ? "" : `<div class="empty">Brak stacji${favOnly ? " w ulubionych" : ""}.</div>`;
+  for (const s of items){
+    const el = document.createElement("div");
+    el.innerHTML = `<button class="card${current?.id === s.id ? " active" : ""}">
+        <span class="logo" style="background:${s.color}">${initials(s.name)}</span>
+        <span class="info"><div class="name">${s.name}</div><div class="genre">${s.genre}</div></span>
+      </button>
+      <button class="fav${favs.has(s.id) ? " on" : ""}" aria-label="Ulubione">${favs.has(s.id) ? "★" : "☆"}</button>`;
+    el.style.position = "relative";
+    el.querySelector(".card").onclick = () => play(s);
+    el.querySelector(".fav").onclick = e => {
+      e.stopPropagation();
+      favs.has(s.id) ? favs.delete(s.id) : favs.add(s.id);
+      store.set("favs", [...favs]); render();
+    };
+    list.appendChild(el);
+  }
+}
+
+function setStatus(text, live){
+  $("#status").textContent = text;
+  $("#dot").classList.toggle("live", !!live);
+}
+
+function stopHls(){ if (hls){ hls.destroy(); hls = null; } }
+
+function load(url){
+  stopHls();
+  audio.removeAttribute("src");
+  if (/\.m3u8(\?|$)/i.test(url) && !audio.canPlayType("application/vnd.apple.mpegurl") && window.Hls?.isSupported()){
+    hls = new Hls();
+    hls.on(Hls.Events.ERROR, (_, d) => { if (d.fatal) onFail(); });
+    hls.loadSource(url);
+    hls.attachMedia(audio);
+  } else {
+    audio.src = url;
+  }
+  return audio.play();
+}
+
+async function play(s){
+  current = s; triedFallback = false;
+  $("#nowName").textContent = s.name;
+  playBtn.disabled = false;
+  setStatus("Łączenie…");
+  render();
+  if ("mediaSession" in navigator) navigator.mediaSession.metadata = new MediaMetadata({title: s.name, artist: s.genre});
+  try { await load(urlCache[s.id] || s.url); } catch(e){ if (e.name !== "AbortError") onFail(); }
+}
+
+// Gdy podstawowy adres nie działa — szukamy aktualnego strumienia w katalogu Radio Browser
+async function onFail(){
+  const s = current;
+  if (!s) return;
+  if (triedFallback){ setStatus("Nie udało się połączyć ze stacją"); return; }
+  triedFallback = true;
+  setStatus("Szukam alternatywnego strumienia…");
+  try {
+    const r = await fetch("https://all.api.radio-browser.info/json/stations/search?" + new URLSearchParams({
+      name: s.q || s.name, countrycode: "PL", hidebroken: "true", order: "clickcount", reverse: "true", limit: "10"}));
+    const found = (await r.json()).map(x => x.url_resolved).find(u => u.startsWith("https://"));
+    if (!found || current !== s) throw 0;
+    urlCache[s.id] = found; store.set("urlCache", urlCache);
+    await load(found);
+  } catch(e){ if (current === s) setStatus("Nie udało się połączyć ze stacją"); }
+}
+
+audio.addEventListener("playing", () => { setStatus("Na żywo", true); playBtn.textContent = "❚❚"; playBtn.setAttribute("aria-label","Pauza"); });
+audio.addEventListener("pause",   () => { setStatus("Wstrzymano"); playBtn.textContent = "▶"; playBtn.setAttribute("aria-label","Odtwórz"); });
+audio.addEventListener("waiting", () => setStatus("Buforowanie…"));
+audio.addEventListener("error",   () => { if (audio.getAttribute("src")) onFail(); });
+
+playBtn.onclick = () => {
+  if (!current) return;
+  if (audio.paused) play(current); // ponowne połączenie = zawsze na żywo
+  else { audio.pause(); stopHls(); }
+};
+
+const vol = $("#vol");
+vol.value = store.get("vol", 0.8);
+audio.volume = vol.value;
+vol.oninput = () => { audio.volume = vol.value; store.set("vol", +vol.value); };
+
+$("#q").oninput = render;
+$("#favOnly").onclick = e => {
+  const b = e.currentTarget;
+  b.setAttribute("aria-pressed", b.getAttribute("aria-pressed") !== "true");
+  render();
+};
+document.addEventListener("keydown", e => {
+  if (e.code === "Space" && e.target.tagName !== "INPUT"){ e.preventDefault(); playBtn.click(); }
+});
+
+render();
+</script>
+</body>
+</html>
