@@ -33,10 +33,14 @@ main{max-width:1100px;margin:0 auto;padding:16px;display:grid;grid-template-colu
 .card{position:relative;display:flex;align-items:center;gap:12px;padding:14px 36px 14px 14px;border-radius:14px;background:var(--surface);border:1px solid var(--border);box-shadow:var(--shadow);cursor:pointer;text-align:left;color:inherit;font:inherit;width:100%}
 .card:hover{border-color:var(--accent)}
 .card.active{outline:2px solid var(--accent);outline-offset:-1px}
-.logo{position:relative;flex:none;width:52px;height:52px;border-radius:14px;display:grid;place-items:center;color:#fff;box-shadow:inset 0 1px 0 rgba(255,255,255,.25),0 2px 6px rgba(0,0,0,.15)}
+.logo{position:relative;flex:none;width:52px;height:52px;border-radius:14px;display:grid;place-items:center;color:#fff;overflow:hidden;background:linear-gradient(135deg,var(--c),color-mix(in srgb,var(--c) 55%,#000));box-shadow:inset 0 1px 0 rgba(255,255,255,.25),0 2px 6px rgba(0,0,0,.15)}
 .logo svg{width:26px;height:26px}
+.logo img{display:none;width:100%;height:100%;object-fit:contain;padding:7px;background:#fff}
+.logo.has-img{background:#fff;box-shadow:0 0 0 1px var(--border),0 2px 6px rgba(0,0,0,.12)}
+.logo.has-img img{display:block}
+.logo.has-img > svg{display:none}
 .ico{width:1em;height:1em;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;vertical-align:-.125em}
-.eq{display:none;position:absolute;inset:0;border-radius:inherit;background:inherit;align-items:flex-end;justify-content:center;gap:3px;padding:14px 0}
+.eq{display:none;position:absolute;inset:0;border-radius:inherit;background:linear-gradient(135deg,var(--c),color-mix(in srgb,var(--c) 55%,#000));align-items:flex-end;justify-content:center;gap:3px;padding:14px 0}
 .eq i{width:4px;background:#fff;border-radius:2px;animation:eq 1s ease-in-out infinite}
 .eq i:nth-child(2){animation-delay:-.4s}.eq i:nth-child(3){animation-delay:-.7s}.eq i:nth-child(4){animation-delay:-.2s}
 @keyframes eq{0%,100%{height:20%}50%{height:100%}}
@@ -134,27 +138,27 @@ footer{max-width:1100px;margin:0 auto;padding:8px 16px;color:var(--muted);font-s
 
 <script>
 const STATIONS = [
-  {id:"rmf", icon:"pop",      name:"RMF FM",                 genre:"Pop / hity",        color:"#e30613", url:"https://rs6-krk2.rmfstream.pl/RMFFM48"},
-  {id:"zet", icon:"pop",      name:"Radio ZET",              genre:"Pop / hity",        color:"#d2001e", url:"https://zt.cdn.eurozet.pl/zet-net.mp3"},
-  {id:"pr1", icon:"news",      name:"Polskie Radio Jedynka",  genre:"Informacje / muzyka",color:"#c8102e", url:"https://stream11.polskieradio.pl/pr1/pr1.sdp/playlist.m3u8", q:"Polskie Radio Program 1"},
-  {id:"pr2", icon:"classic",      name:"Polskie Radio Dwójka",   genre:"Klasyka / kultura", color:"#7a3b8f", url:"https://stream12.polskieradio.pl/pr2/pr2.sdp/playlist.m3u8", q:"Polskie Radio Program 2"},
-  {id:"pr3", icon:"rock",      name:"Polskie Radio Trójka",   genre:"Rock / alternatywa",color:"#f39200", url:"https://stream13.polskieradio.pl/pr3/pr3.sdp/playlist.m3u8", q:"Polskie Radio Program 3"},
-  {id:"pr4", icon:"youth",      name:"Polskie Radio Czwórka",  genre:"Młodzieżowe",       color:"#00a3e0", url:"https://stream14.polskieradio.pl/pr4/pr4.sdp/playlist.m3u8", q:"Polskie Radio Czwórka"},
-  {id:"pr24", icon:"news",     name:"Polskie Radio 24",       genre:"Informacje",        color:"#004b87", url:"https://stream15.polskieradio.pl/pr24/pr24.sdp/playlist.m3u8", q:"Polskie Radio 24"},
-  {id:"eska", icon:"pop",     name:"Radio Eska",             genre:"Pop / dance",       color:"#ed1c24", url:"https://ic1.smcdn.pl/2380-1.mp3"},
-  {id:"eskarock", icon:"rock", name:"Eska Rock",              genre:"Rock",              color:"#1d1d1b", url:"https://ic1.smcdn.pl/5380-1.mp3"},
-  {id:"vox", icon:"dance",      name:"VOX FM",                 genre:"Dance / disco",     color:"#e6007e", url:"https://ic1.smcdn.pl/3990-1.mp3"},
-  {id:"maxx", icon:"dance",     name:"RMF MAXX",               genre:"Dance / club",      color:"#ff6a00", url:"https://rs101-krk.rmfstream.pl/rmf_maxxx"},
-  {id:"classic", icon:"film",  name:"RMF Classic",            genre:"Muzyka filmowa",    color:"#8a6d3b", url:"https://rs101-krk.rmfstream.pl/RMFCLASSIC48"},
-  {id:"anty", icon:"rock",     name:"Antyradio",              genre:"Rock",              color:"#111111", url:"https://an.cdn.eurozet.pl/ant-waw.mp3"},
-  {id:"chilli", icon:"chill",   name:"Chillizet",              genre:"Chillout",          color:"#00a99d", url:"https://ch.cdn.eurozet.pl/chi-net.mp3"},
-  {id:"melo", icon:"love",     name:"Meloradio",              genre:"Ballady / soft",    color:"#9b2d86", url:"https://ml.cdn.eurozet.pl/mel-net.mp3"},
-  {id:"tokfm", icon:"talk",    name:"TOK FM",                 genre:"Informacje / talk", color:"#0057a8", url:"https://radiostream.pl/tuba10-1.mp3"},
-  {id:"zp", icon:"vinyl",       name:"Radio Złote Przeboje",   genre:"Przeboje lat 70-90",color:"#c9a227", url:"https://radiostream.pl/tuba8936-1.mp3", q:"Złote Przeboje"},
-  {id:"357", icon:"tower",      name:"Radio 357",              genre:"Muzyka / publicystyka",color:"#222", url:"https://stream.radio357.pl/"},
-  {id:"rns", icon:"tower",      name:"Radio Nowy Świat",       genre:"Muzyka / publicystyka",color:"#2b7a3d", url:"https://n12.rcs.revma.com/ypqt40u0x1zuv"},
-  {id:"wnet", icon:"talk",     name:"Radio Wnet",             genre:"Publicystyka / muzyka",color:"#d4202a", url:"https://stream.rcs.revma.com/ye5kghkgcm0uv", q:"Wnet"},
-  {id:"maryja", icon:"faith",   name:"Radio Maryja",           genre:"Religijne",         color:"#1f4e9c", url:"https://radiomaryja.fastcast4u.com/proxy/radiomaryja?mp=/1"},
+  {id:"rmf", site:"rmf.fm", icon:"pop",      name:"RMF FM",                 genre:"Pop / hity",        color:"#e30613", url:"https://rs6-krk2.rmfstream.pl/RMFFM48"},
+  {id:"zet", site:"radiozet.pl", icon:"pop",      name:"Radio ZET",              genre:"Pop / hity",        color:"#d2001e", url:"https://zt.cdn.eurozet.pl/zet-net.mp3"},
+  {id:"pr1", site:"jedynka.polskieradio.pl", icon:"news",      name:"Polskie Radio Jedynka",  genre:"Informacje / muzyka",color:"#c8102e", url:"https://stream11.polskieradio.pl/pr1/pr1.sdp/playlist.m3u8", q:"Polskie Radio Program 1"},
+  {id:"pr2", site:"dwojka.polskieradio.pl", icon:"classic",      name:"Polskie Radio Dwójka",   genre:"Klasyka / kultura", color:"#7a3b8f", url:"https://stream12.polskieradio.pl/pr2/pr2.sdp/playlist.m3u8", q:"Polskie Radio Program 2"},
+  {id:"pr3", site:"trojka.polskieradio.pl", icon:"rock",      name:"Polskie Radio Trójka",   genre:"Rock / alternatywa",color:"#f39200", url:"https://stream13.polskieradio.pl/pr3/pr3.sdp/playlist.m3u8", q:"Polskie Radio Program 3"},
+  {id:"pr4", site:"czworka.polskieradio.pl", icon:"youth",      name:"Polskie Radio Czwórka",  genre:"Młodzieżowe",       color:"#00a3e0", url:"https://stream14.polskieradio.pl/pr4/pr4.sdp/playlist.m3u8", q:"Polskie Radio Czwórka"},
+  {id:"pr24", site:"polskieradio24.pl", icon:"news",     name:"Polskie Radio 24",       genre:"Informacje",        color:"#004b87", url:"https://stream15.polskieradio.pl/pr24/pr24.sdp/playlist.m3u8", q:"Polskie Radio 24"},
+  {id:"eska", site:"eska.pl", icon:"pop",     name:"Radio Eska",             genre:"Pop / dance",       color:"#ed1c24", url:"https://ic1.smcdn.pl/2380-1.mp3"},
+  {id:"eskarock", site:"eskarock.pl", icon:"rock", name:"Eska Rock",              genre:"Rock",              color:"#1d1d1b", url:"https://ic1.smcdn.pl/5380-1.mp3"},
+  {id:"vox", site:"voxfm.pl", icon:"dance",      name:"VOX FM",                 genre:"Dance / disco",     color:"#e6007e", url:"https://ic1.smcdn.pl/3990-1.mp3"},
+  {id:"maxx", site:"rmfmaxx.pl", icon:"dance",     name:"RMF MAXX",               genre:"Dance / club",      color:"#ff6a00", url:"https://rs101-krk.rmfstream.pl/rmf_maxxx"},
+  {id:"classic", site:"rmfclassic.pl", icon:"film",  name:"RMF Classic",            genre:"Muzyka filmowa",    color:"#8a6d3b", url:"https://rs101-krk.rmfstream.pl/RMFCLASSIC48"},
+  {id:"anty", site:"antyradio.pl", icon:"rock",     name:"Antyradio",              genre:"Rock",              color:"#111111", url:"https://an.cdn.eurozet.pl/ant-waw.mp3"},
+  {id:"chilli", site:"chillizet.pl", icon:"chill",   name:"Chillizet",              genre:"Chillout",          color:"#00a99d", url:"https://ch.cdn.eurozet.pl/chi-net.mp3"},
+  {id:"melo", site:"meloradio.pl", icon:"love",     name:"Meloradio",              genre:"Ballady / soft",    color:"#9b2d86", url:"https://ml.cdn.eurozet.pl/mel-net.mp3"},
+  {id:"tokfm", site:"tokfm.pl", icon:"talk",    name:"TOK FM",                 genre:"Informacje / talk", color:"#0057a8", url:"https://radiostream.pl/tuba10-1.mp3"},
+  {id:"zp", site:"zloteprzeboje.pl", icon:"vinyl",       name:"Radio Złote Przeboje",   genre:"Przeboje lat 70-90",color:"#c9a227", url:"https://radiostream.pl/tuba8936-1.mp3", q:"Złote Przeboje"},
+  {id:"357", site:"radio357.pl", icon:"tower",      name:"Radio 357",              genre:"Muzyka / publicystyka",color:"#222", url:"https://stream.radio357.pl/"},
+  {id:"rns", site:"nowyswiat.online", icon:"tower",      name:"Radio Nowy Świat",       genre:"Muzyka / publicystyka",color:"#2b7a3d", url:"https://n12.rcs.revma.com/ypqt40u0x1zuv"},
+  {id:"wnet", site:"wnet.fm", icon:"talk",     name:"Radio Wnet",             genre:"Publicystyka / muzyka",color:"#d4202a", url:"https://stream.rcs.revma.com/ye5kghkgcm0uv", q:"Wnet"},
+  {id:"maryja", site:"radiomaryja.pl", icon:"faith",   name:"Radio Maryja",           genre:"Religijne",         color:"#1f4e9c", url:"https://radiomaryja.fastcast4u.com/proxy/radiomaryja?mp=/1"},
 ];
 
 const $ = s => document.querySelector(s);
@@ -166,6 +170,8 @@ const store = {
 };
 let favs = new Set(store.get("favs", []));
 const urlCache = store.get("urlCache", {});
+const logoOk = {};
+const logoUrl = s => `https://www.google.com/s2/favicons?sz=128&domain=${s.site}`;
 const DEFAULT_ORDER = STATIONS.map(s => s.id);
 
 // Kolejność stacji zapisana przez użytkownika (nowe stacje trafiają na koniec)
@@ -253,11 +259,15 @@ function render(){
     el.className = "item";
     el.dataset.id = s.id;
     el.innerHTML = `<button class="card${current?.id === s.id ? " active" : ""}">
-        <span class="logo" style="background:linear-gradient(135deg, ${s.color}, color-mix(in srgb, ${s.color} 55%, #000))"><svg class="ico"><use href="#g-${s.icon}"/></svg><span class="eq"><i></i><i></i><i></i><i></i></span></span>
+        <span class="logo${logoOk[s.id] ? " has-img" : ""}" style="--c:${s.color}"><svg class="ico"><use href="#g-${s.icon}"/></svg><img alt="" decoding="async" src="${logoUrl(s)}"><span class="eq"><i></i><i></i><i></i><i></i></span></span>
         <span class="info"><div class="name">${s.name}</div><div class="genre">${s.genre}</div></span>
       </button>
       <button class="fav${favs.has(s.id) ? " on" : ""}" aria-label="Ulubione"><svg class="ico"><use href="#i-star"/></svg></button>
       <button class="grip" aria-label="Przenieś ${s.name} (strzałki zmieniają kolejność)" title="Przeciągnij, aby przenieść"><svg class="ico"><use href="#i-grip"/></svg></button>`;
+    const img = el.querySelector(".logo img");
+    // Logo stacji; gdy się nie wczyta (albo to tylko domyślna ikonka 16px) — zostaje ikona gatunku
+    img.onload = () => { logoOk[s.id] = img.naturalWidth > 16; img.parentNode.classList.toggle("has-img", logoOk[s.id]); };
+    img.onerror = () => { logoOk[s.id] = false; img.parentNode.classList.remove("has-img"); };
     const grip = el.querySelector(".grip");
     grip.onpointerdown = e => startDrag(e, el);
     grip.onkeydown = e => {
