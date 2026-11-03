@@ -22,23 +22,38 @@ h1{margin:0 0 4px;font-size:1.8rem;letter-spacing:-.02em}
 h1 span{color:var(--accent)}
 .sub{color:var(--muted);margin:0 0 18px}
 .tools{display:flex;gap:10px;flex-wrap:wrap}
-.tools input{flex:1;min-width:200px;padding:11px 14px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:1rem}
+.search{flex:1;min-width:200px;position:relative;display:flex}
+.search .ico{position:absolute;left:13px;top:50%;transform:translateY(-50%);color:var(--muted)}
+.tools input{flex:1;width:100%;padding:11px 14px 11px 38px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:1rem}
+.chip .ico{margin-right:4px}
+.chip[aria-pressed="true"] .ico{fill:currentColor}
 .chip{padding:10px 14px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--text);cursor:pointer;font-size:.95rem}
 .chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-text)}
 main{max-width:1100px;margin:0 auto;padding:16px;display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:14px}
-.card{position:relative;display:flex;align-items:center;gap:12px;padding:14px;border-radius:14px;background:var(--surface);border:1px solid var(--border);box-shadow:var(--shadow);cursor:pointer;text-align:left;color:inherit;font:inherit;width:100%}
+.card{position:relative;display:flex;align-items:center;gap:12px;padding:14px 36px 14px 14px;border-radius:14px;background:var(--surface);border:1px solid var(--border);box-shadow:var(--shadow);cursor:pointer;text-align:left;color:inherit;font:inherit;width:100%}
 .card:hover{border-color:var(--accent)}
 .card.active{outline:2px solid var(--accent);outline-offset:-1px}
-.logo{flex:none;width:52px;height:52px;border-radius:12px;display:grid;place-items:center;font-weight:800;color:#fff;font-size:.95rem;letter-spacing:-.02em}
+.logo{position:relative;flex:none;width:52px;height:52px;border-radius:14px;display:grid;place-items:center;color:#fff;box-shadow:inset 0 1px 0 rgba(255,255,255,.25),0 2px 6px rgba(0,0,0,.15)}
+.logo svg{width:26px;height:26px}
+.ico{width:1em;height:1em;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;vertical-align:-.125em}
+.eq{display:none;position:absolute;inset:0;border-radius:inherit;background:inherit;align-items:flex-end;justify-content:center;gap:3px;padding:14px 0}
+.eq i{width:4px;background:#fff;border-radius:2px;animation:eq 1s ease-in-out infinite}
+.eq i:nth-child(2){animation-delay:-.4s}.eq i:nth-child(3){animation-delay:-.7s}.eq i:nth-child(4){animation-delay:-.2s}
+@keyframes eq{0%,100%{height:20%}50%{height:100%}}
+body.playing .card.active .eq{display:flex}
 .info{min-width:0;flex:1}
 .name{font-weight:650;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .genre{color:var(--muted);font-size:.85rem}
-.fav{position:absolute;top:6px;right:8px;background:none;border:0;font-size:1.15rem;cursor:pointer;color:var(--muted);padding:4px}
+.fav{position:absolute;top:8px;right:8px;background:none;border:0;font-size:1.15rem;cursor:pointer;color:var(--muted);padding:4px;line-height:0;border-radius:8px}
+.fav:hover{color:#f5b400}
 .fav.on{color:#f5b400}
+.fav.on .ico{fill:currentColor}
 .empty{grid-column:1/-1;text-align:center;color:var(--muted);padding:40px}
 .player{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border-top:1px solid var(--border);box-shadow:0 -4px 20px rgba(0,0,0,.08)}
 .player-in{max-width:1100px;margin:0 auto;padding:12px 16px;display:flex;align-items:center;gap:14px}
-.play{flex:none;width:52px;height:52px;border-radius:50%;border:0;background:var(--accent);color:var(--accent-text);font-size:1.3rem;cursor:pointer}
+.play{flex:none;width:52px;height:52px;border-radius:50%;border:0;background:var(--accent);color:var(--accent-text);font-size:1.4rem;cursor:pointer;display:grid;place-items:center;box-shadow:0 4px 12px color-mix(in srgb,var(--accent) 40%,transparent);transition:transform .1s}
+.play:active{transform:scale(.94)}
+.play .ico{fill:currentColor;stroke:none}
 .play:disabled{opacity:.4;cursor:default}
 .now{flex:1;min-width:0}
 .now .name{font-size:1.05rem}
@@ -46,19 +61,41 @@ main{max-width:1100px;margin:0 auto;padding:16px;display:grid;grid-template-colu
 .dot{width:8px;height:8px;border-radius:50%;background:var(--muted)}
 .dot.live{background:#1fbf5f;animation:pulse 1.4s infinite}
 @keyframes pulse{50%{opacity:.35}}
-.vol{display:flex;align-items:center;gap:8px}
+.vol{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:1.25rem;line-height:0}
+.h1ico{color:var(--accent)}
 .vol input{width:110px;accent-color:var(--accent)}
 @media (max-width:560px){.vol input{width:70px}.logo{width:44px;height:44px}}
 footer{max-width:1100px;margin:0 auto;padding:8px 16px;color:var(--muted);font-size:.8rem}
 </style>
 </head>
 <body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-play" viewBox="0 0 24 24"><path d="M8 5.2v13.6a1 1 0 0 0 1.5.86l11-6.8a1 1 0 0 0 0-1.72l-11-6.8A1 1 0 0 0 8 5.2z"/></symbol>
+  <symbol id="i-pause" viewBox="0 0 24 24"><rect x="6" y="4.5" width="4" height="15" rx="1.2"/><rect x="14" y="4.5" width="4" height="15" rx="1.2"/></symbol>
+  <symbol id="i-star" viewBox="0 0 24 24"><path d="M12 2.8l2.85 5.78 6.38.93-4.62 4.5 1.09 6.35L12 17.36l-5.7 3 1.09-6.35-4.62-4.5 6.38-.93z"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></symbol>
+  <symbol id="i-vol" viewBox="0 0 24 24"><path d="M11 5 6 9H2v6h4l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M19 5a10 10 0 0 1 0 14"/></symbol>
+  <symbol id="i-radio" viewBox="0 0 24 24"><rect x="2" y="8" width="20" height="13" rx="2.5"/><path d="M6 8 17 3"/><circle cx="15.5" cy="14.5" r="3"/><path d="M5.5 12.5h4M5.5 16.5h4"/></symbol>
+  <symbol id="g-pop" viewBox="0 0 24 24"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></symbol>
+  <symbol id="g-talk" viewBox="0 0 24 24"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M19 10v1a7 7 0 0 1-14 0v-1"/><path d="M12 18v4M8 22h8"/></symbol>
+  <symbol id="g-news" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></symbol>
+  <symbol id="g-rock" viewBox="0 0 24 24"><path d="M13 2 3 14h9l-1 8 10-12h-9z"/></symbol>
+  <symbol id="g-dance" viewBox="0 0 24 24"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3z"/><path d="M19 3v4M17 5h4"/></symbol>
+  <symbol id="g-classic" viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M7 4v9M12 4v9M17 4v9M7 13v7M12 13v7M17 13v7"/><path d="M5.5 4v6h3V4M15.5 4v6h3V4" /></symbol>
+  <symbol id="g-film" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M7 3v18M17 3v18M3 7.5h4M3 12h18M3 16.5h4M17 7.5h4M17 16.5h4"/></symbol>
+  <symbol id="g-chill" viewBox="0 0 24 24"><path d="M2 6c.6.5 1.2 1 2.5 1C7 7 7 5 9.5 5c2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"/><path d="M2 12c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"/><path d="M2 18c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"/></symbol>
+  <symbol id="g-love" viewBox="0 0 24 24"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7z"/></symbol>
+  <symbol id="g-youth" viewBox="0 0 24 24"><path d="M3 14h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-7a9 9 0 0 1 18 0v7a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3"/></symbol>
+  <symbol id="g-vinyl" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6.5"/><circle cx="12" cy="12" r="2"/></symbol>
+  <symbol id="g-tower" viewBox="0 0 24 24"><path d="M4.9 16.1C1 12.2 1 5.8 4.9 1.9"/><path d="M7.8 4.7a6.14 6.14 0 0 0-.8 7.5"/><circle cx="12" cy="9" r="2"/><path d="M16.2 4.8c2 2 2.26 5.11.8 7.47"/><path d="M19.1 1.9a9.96 9.96 0 0 1 0 14.1"/><path d="M9.5 18h5"/><path d="m8 22 4-11 4 11"/></symbol>
+  <symbol id="g-faith" viewBox="0 0 24 24"><path d="M12 2v20M6.5 8h11"/></symbol>
+</svg>
 <header>
-  <h1>📻 Radio <span>Online</span></h1>
+  <h1><svg class="ico h1ico"><use href="#i-radio"/></svg> Radio <span>Online</span></h1>
   <p class="sub">Najpopularniejsze polskie stacje radiowe — kliknij i słuchaj.</p>
   <div class="tools">
-    <input id="q" type="search" placeholder="Szukaj stacji lub gatunku…" aria-label="Szukaj stacji">
-    <button class="chip" id="favOnly" aria-pressed="false">★ Ulubione</button>
+    <label class="search"><svg class="ico"><use href="#i-search"/></svg><input id="q" type="search" placeholder="Szukaj stacji lub gatunku…" aria-label="Szukaj stacji"></label>
+    <button class="chip" id="favOnly" aria-pressed="false"><svg class="ico"><use href="#i-star"/></svg>Ulubione</button>
   </div>
 </header>
 
@@ -67,13 +104,13 @@ footer{max-width:1100px;margin:0 auto;padding:8px 16px;color:var(--muted);font-s
 
 <div class="player">
   <div class="player-in">
-    <button class="play" id="play" disabled aria-label="Odtwórz">▶</button>
+    <button class="play" id="play" disabled aria-label="Odtwórz"><svg class="ico"><use href="#i-play"/></svg></button>
     <div class="now">
       <div class="name" id="nowName">Wybierz stację</div>
       <div class="status"><span class="dot" id="dot"></span><span id="status">—</span></div>
     </div>
     <div class="vol">
-      <span aria-hidden="true">🔊</span>
+      <svg class="ico" aria-hidden="true"><use href="#i-vol"/></svg>
       <input id="vol" type="range" min="0" max="1" step="0.01" value="0.8" aria-label="Głośność">
     </div>
   </div>
@@ -82,27 +119,27 @@ footer{max-width:1100px;margin:0 auto;padding:8px 16px;color:var(--muted);font-s
 
 <script>
 const STATIONS = [
-  {id:"rmf",      name:"RMF FM",                 genre:"Pop / hity",        color:"#e30613", url:"https://rs6-krk2.rmfstream.pl/RMFFM48"},
-  {id:"zet",      name:"Radio ZET",              genre:"Pop / hity",        color:"#d2001e", url:"https://zt.cdn.eurozet.pl/zet-net.mp3"},
-  {id:"pr1",      name:"Polskie Radio Jedynka",  genre:"Informacje / muzyka",color:"#c8102e", url:"https://stream11.polskieradio.pl/pr1/pr1.sdp/playlist.m3u8", q:"Polskie Radio Program 1"},
-  {id:"pr2",      name:"Polskie Radio Dwójka",   genre:"Klasyka / kultura", color:"#7a3b8f", url:"https://stream12.polskieradio.pl/pr2/pr2.sdp/playlist.m3u8", q:"Polskie Radio Program 2"},
-  {id:"pr3",      name:"Polskie Radio Trójka",   genre:"Rock / alternatywa",color:"#f39200", url:"https://stream13.polskieradio.pl/pr3/pr3.sdp/playlist.m3u8", q:"Polskie Radio Program 3"},
-  {id:"pr4",      name:"Polskie Radio Czwórka",  genre:"Młodzieżowe",       color:"#00a3e0", url:"https://stream14.polskieradio.pl/pr4/pr4.sdp/playlist.m3u8", q:"Polskie Radio Czwórka"},
-  {id:"pr24",     name:"Polskie Radio 24",       genre:"Informacje",        color:"#004b87", url:"https://stream15.polskieradio.pl/pr24/pr24.sdp/playlist.m3u8", q:"Polskie Radio 24"},
-  {id:"eska",     name:"Radio Eska",             genre:"Pop / dance",       color:"#ed1c24", url:"https://ic1.smcdn.pl/2380-1.mp3"},
-  {id:"eskarock", name:"Eska Rock",              genre:"Rock",              color:"#1d1d1b", url:"https://ic1.smcdn.pl/5380-1.mp3"},
-  {id:"vox",      name:"VOX FM",                 genre:"Dance / disco",     color:"#e6007e", url:"https://ic1.smcdn.pl/3990-1.mp3"},
-  {id:"maxx",     name:"RMF MAXX",               genre:"Dance / club",      color:"#ff6a00", url:"https://rs101-krk.rmfstream.pl/rmf_maxxx"},
-  {id:"classic",  name:"RMF Classic",            genre:"Muzyka filmowa",    color:"#8a6d3b", url:"https://rs101-krk.rmfstream.pl/RMFCLASSIC48"},
-  {id:"anty",     name:"Antyradio",              genre:"Rock",              color:"#111111", url:"https://an.cdn.eurozet.pl/ant-waw.mp3"},
-  {id:"chilli",   name:"Chillizet",              genre:"Chillout",          color:"#00a99d", url:"https://ch.cdn.eurozet.pl/chi-net.mp3"},
-  {id:"melo",     name:"Meloradio",              genre:"Ballady / soft",    color:"#9b2d86", url:"https://ml.cdn.eurozet.pl/mel-net.mp3"},
-  {id:"tokfm",    name:"TOK FM",                 genre:"Informacje / talk", color:"#0057a8", url:"https://radiostream.pl/tuba10-1.mp3"},
-  {id:"zp",       name:"Radio Złote Przeboje",   genre:"Przeboje lat 70-90",color:"#c9a227", url:"https://radiostream.pl/tuba8936-1.mp3", q:"Złote Przeboje"},
-  {id:"357",      name:"Radio 357",              genre:"Muzyka / publicystyka",color:"#222", url:"https://stream.radio357.pl/"},
-  {id:"rns",      name:"Radio Nowy Świat",       genre:"Muzyka / publicystyka",color:"#2b7a3d", url:"https://n12.rcs.revma.com/ypqt40u0x1zuv"},
-  {id:"wnet",     name:"Radio Wnet",             genre:"Publicystyka / muzyka",color:"#d4202a", url:"https://stream.rcs.revma.com/ye5kghkgcm0uv", q:"Wnet"},
-  {id:"maryja",   name:"Radio Maryja",           genre:"Religijne",         color:"#1f4e9c", url:"https://radiomaryja.fastcast4u.com/proxy/radiomaryja?mp=/1"},
+  {id:"rmf", icon:"pop",      name:"RMF FM",                 genre:"Pop / hity",        color:"#e30613", url:"https://rs6-krk2.rmfstream.pl/RMFFM48"},
+  {id:"zet", icon:"pop",      name:"Radio ZET",              genre:"Pop / hity",        color:"#d2001e", url:"https://zt.cdn.eurozet.pl/zet-net.mp3"},
+  {id:"pr1", icon:"news",      name:"Polskie Radio Jedynka",  genre:"Informacje / muzyka",color:"#c8102e", url:"https://stream11.polskieradio.pl/pr1/pr1.sdp/playlist.m3u8", q:"Polskie Radio Program 1"},
+  {id:"pr2", icon:"classic",      name:"Polskie Radio Dwójka",   genre:"Klasyka / kultura", color:"#7a3b8f", url:"https://stream12.polskieradio.pl/pr2/pr2.sdp/playlist.m3u8", q:"Polskie Radio Program 2"},
+  {id:"pr3", icon:"rock",      name:"Polskie Radio Trójka",   genre:"Rock / alternatywa",color:"#f39200", url:"https://stream13.polskieradio.pl/pr3/pr3.sdp/playlist.m3u8", q:"Polskie Radio Program 3"},
+  {id:"pr4", icon:"youth",      name:"Polskie Radio Czwórka",  genre:"Młodzieżowe",       color:"#00a3e0", url:"https://stream14.polskieradio.pl/pr4/pr4.sdp/playlist.m3u8", q:"Polskie Radio Czwórka"},
+  {id:"pr24", icon:"news",     name:"Polskie Radio 24",       genre:"Informacje",        color:"#004b87", url:"https://stream15.polskieradio.pl/pr24/pr24.sdp/playlist.m3u8", q:"Polskie Radio 24"},
+  {id:"eska", icon:"pop",     name:"Radio Eska",             genre:"Pop / dance",       color:"#ed1c24", url:"https://ic1.smcdn.pl/2380-1.mp3"},
+  {id:"eskarock", icon:"rock", name:"Eska Rock",              genre:"Rock",              color:"#1d1d1b", url:"https://ic1.smcdn.pl/5380-1.mp3"},
+  {id:"vox", icon:"dance",      name:"VOX FM",                 genre:"Dance / disco",     color:"#e6007e", url:"https://ic1.smcdn.pl/3990-1.mp3"},
+  {id:"maxx", icon:"dance",     name:"RMF MAXX",               genre:"Dance / club",      color:"#ff6a00", url:"https://rs101-krk.rmfstream.pl/rmf_maxxx"},
+  {id:"classic", icon:"film",  name:"RMF Classic",            genre:"Muzyka filmowa",    color:"#8a6d3b", url:"https://rs101-krk.rmfstream.pl/RMFCLASSIC48"},
+  {id:"anty", icon:"rock",     name:"Antyradio",              genre:"Rock",              color:"#111111", url:"https://an.cdn.eurozet.pl/ant-waw.mp3"},
+  {id:"chilli", icon:"chill",   name:"Chillizet",              genre:"Chillout",          color:"#00a99d", url:"https://ch.cdn.eurozet.pl/chi-net.mp3"},
+  {id:"melo", icon:"love",     name:"Meloradio",              genre:"Ballady / soft",    color:"#9b2d86", url:"https://ml.cdn.eurozet.pl/mel-net.mp3"},
+  {id:"tokfm", icon:"talk",    name:"TOK FM",                 genre:"Informacje / talk", color:"#0057a8", url:"https://radiostream.pl/tuba10-1.mp3"},
+  {id:"zp", icon:"vinyl",       name:"Radio Złote Przeboje",   genre:"Przeboje lat 70-90",color:"#c9a227", url:"https://radiostream.pl/tuba8936-1.mp3", q:"Złote Przeboje"},
+  {id:"357", icon:"tower",      name:"Radio 357",              genre:"Muzyka / publicystyka",color:"#222", url:"https://stream.radio357.pl/"},
+  {id:"rns", icon:"tower",      name:"Radio Nowy Świat",       genre:"Muzyka / publicystyka",color:"#2b7a3d", url:"https://n12.rcs.revma.com/ypqt40u0x1zuv"},
+  {id:"wnet", icon:"talk",     name:"Radio Wnet",             genre:"Publicystyka / muzyka",color:"#d4202a", url:"https://stream.rcs.revma.com/ye5kghkgcm0uv", q:"Wnet"},
+  {id:"maryja", icon:"faith",   name:"Radio Maryja",           genre:"Religijne",         color:"#1f4e9c", url:"https://radiomaryja.fastcast4u.com/proxy/radiomaryja?mp=/1"},
 ];
 
 const $ = s => document.querySelector(s);
@@ -115,12 +152,6 @@ const store = {
 let favs = new Set(store.get("favs", []));
 const urlCache = store.get("urlCache", {});
 
-function initials(n){
-  const w = n.replace(/^(Polskie Radio|Radio)\s+/i, "").split(/\s+/);
-  if (/^[A-Z0-9]{2,4}$/.test(w[0])) return w[0];
-  return (w.length > 1 ? w[0][0] + w[1][0] : w[0].slice(0,3)).toUpperCase();
-}
-
 function render(){
   const q = $("#q").value.trim().toLowerCase();
   const favOnly = $("#favOnly").getAttribute("aria-pressed") === "true";
@@ -131,10 +162,10 @@ function render(){
   for (const s of items){
     const el = document.createElement("div");
     el.innerHTML = `<button class="card${current?.id === s.id ? " active" : ""}">
-        <span class="logo" style="background:${s.color}">${initials(s.name)}</span>
+        <span class="logo" style="background:linear-gradient(135deg, ${s.color}, color-mix(in srgb, ${s.color} 55%, #000))"><svg class="ico"><use href="#g-${s.icon}"/></svg><span class="eq"><i></i><i></i><i></i><i></i></span></span>
         <span class="info"><div class="name">${s.name}</div><div class="genre">${s.genre}</div></span>
       </button>
-      <button class="fav${favs.has(s.id) ? " on" : ""}" aria-label="Ulubione">${favs.has(s.id) ? "★" : "☆"}</button>`;
+      <button class="fav${favs.has(s.id) ? " on" : ""}" aria-label="Ulubione"><svg class="ico"><use href="#i-star"/></svg></button>`;
     el.style.position = "relative";
     el.querySelector(".card").onclick = () => play(s);
     el.querySelector(".fav").onclick = e => {
@@ -194,8 +225,13 @@ async function onFail(){
   } catch(e){ if (current === s) setStatus("Nie udało się połączyć ze stacją"); }
 }
 
-audio.addEventListener("playing", () => { setStatus("Na żywo", true); playBtn.textContent = "❚❚"; playBtn.setAttribute("aria-label","Pauza"); });
-audio.addEventListener("pause",   () => { setStatus("Wstrzymano"); playBtn.textContent = "▶"; playBtn.setAttribute("aria-label","Odtwórz"); });
+function setPlayIcon(on){
+  playBtn.innerHTML = `<svg class="ico"><use href="#i-${on ? "pause" : "play"}"/></svg>`;
+  playBtn.setAttribute("aria-label", on ? "Pauza" : "Odtwórz");
+  document.body.classList.toggle("playing", on);
+}
+audio.addEventListener("playing", () => { setStatus("Na żywo", true); setPlayIcon(true); });
+audio.addEventListener("pause",   () => { setStatus("Wstrzymano"); setPlayIcon(false); });
 audio.addEventListener("waiting", () => setStatus("Buforowanie…"));
 audio.addEventListener("error",   () => { if (audio.getAttribute("src")) onFail(); });
 
