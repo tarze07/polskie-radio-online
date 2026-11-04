@@ -110,6 +110,15 @@ body.amp-mode .amp{display:block}
 /* ---------- Scena za tunerem: ściana, światło i drewniany blat ---------- */
 .scene{display:none;position:fixed;inset:0;z-index:-1;overflow:hidden;pointer-events:none}
 body.amp-mode .scene{display:block}
+/* tło wyłączone: gładkie tło i tuner na środku ekranu */
+body.amp-mode.no-scene .scene{display:none}
+body.amp-mode.no-scene{place-items:center}
+body.amp-mode.no-scene .amp{padding-bottom:16px}
+body.amp-mode.no-scene .amp-case::after{display:none}
+body.amp-mode.no-scene.amp-dark{background:radial-gradient(ellipse at 50% 30%,#2a2c31,#0e0f11 70%)}
+body.amp-mode.no-scene.amp-light{background:radial-gradient(ellipse at 50% 30%,#ffffff,#e4e6ea 70%)}
+.hw[aria-pressed="true"] svg{stroke:#e08a1e}
+.amp.dark .hw[aria-pressed="true"] svg{stroke:#ffb35c}
 .scene .wall{position:absolute;inset:0;background:var(--grain),linear-gradient(180deg,#e9dfcf,#d8cab3 70%,#cbb99c)}
 .scene .light{position:absolute;inset:0}
 .scene .rail{position:absolute;left:0;right:0;bottom:var(--table);height:10px;background:linear-gradient(180deg,rgba(255,255,255,.35),rgba(0,0,0,.08));box-shadow:0 -1px 0 rgba(0,0,0,.06)}
@@ -324,6 +333,7 @@ body:not(.amp-on) .dial-glass{opacity:.25}
         <div class="hw-row">
           <button class="hw" id="ampList" title="Lista stacji" aria-label="Przełącz na listę stacji"><svg viewBox="0 0 24 24"><use href="#i-list"/></svg></button>
           <button class="hw" id="ampTheme" title="Jasna / ciemna obudowa" aria-label="Przełącz kolor obudowy"><svg viewBox="0 0 24 24"><use href="#i-sun"/></svg></button>
+          <button class="hw" id="sceneBtn" aria-pressed="true" title="Tło: włącz / wyłącz" aria-label="Tło za tunerem"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.1-3.1a2 2 0 0 0-2.8 0L6 21"/></svg></button>
           <button class="tsw" id="vuSwitch" role="switch" aria-checked="false" title="Wskaźniki: analogowe / LED" aria-label="Przełącz wskaźniki VU na diodowe"><span class="tsw-ico a"><svg viewBox="0 0 24 24"><path d="M4 16a8 8 0 0 1 16 0"/><path d="m12 16 3-6"/></svg></span><span class="tsw-ico d"><svg viewBox="0 0 24 24"><path d="M6 20v-6M10 20V8M14 20v-9M18 20V5"/></svg></span><i></i></button>
         </div>
         <div class="lamps">
@@ -746,6 +756,17 @@ document.addEventListener("keydown", e => {
     });
   }
   addEventListener("resize", () => { segH = 0; for (const c of ledCols.flat()) c.pkShown = -2; });
+
+  // Tło za tunerem: włączone / wyłączone (zapamiętywane)
+  const sceneBtn = $("#sceneBtn");
+  function setScene(on, save){
+    document.body.classList.toggle("no-scene", !on);
+    sceneBtn.setAttribute("aria-pressed", on);
+    sceneBtn.title = on ? "Wyłącz tło" : "Włącz tło";
+    if (save) store.set("scene", on);
+  }
+  sceneBtn.onclick = () => setScene(document.body.classList.contains("no-scene"), true);
+  setScene(store.get("scene", true), false);
 
   const vuSwitch = $("#vuSwitch");
   function setVuMode(led, save){
