@@ -11,6 +11,8 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/hls.js/1.5.13/hls.min.js"></script>
 <style>
 :root{
+  --wood:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='800' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.003 0.09' numOctaves='3' seed='7' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.9 -0.3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  --grain:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.5 0 0 0 0 0.5 0 0 0 0 0.5 0 0 0 0.09 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E");
   --bg:#f5f6f8; --surface:#fff; --text:#16181d; --muted:#666c78; --border:#e2e5ea;
   --accent:#dc143c; --accent-text:#fff; --shadow:0 1px 2px rgba(0,0,0,.06),0 4px 14px rgba(0,0,0,.05);
 }
@@ -87,13 +89,10 @@ footer{max-width:1100px;margin:0 auto;padding:8px 16px;color:var(--muted);font-s
 .top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
 .view-btn{flex:none;margin-top:4px}
 body.amp-mode header,body.amp-mode #list,body.amp-mode footer,body.amp-mode .player{display:none}
-body.amp-mode{padding:0;min-height:100vh;min-height:100dvh;display:grid;place-items:center;
-  background:radial-gradient(ellipse at 50% 30%,color-mix(in srgb,var(--bg) 85%,#fff),var(--bg) 70%)}
+body.amp-mode{padding:0;min-height:100vh;min-height:100dvh;display:grid;place-items:end center}
 .amp{display:none;width:100%;max-width:1000px;margin:0 auto;padding:16px}
 body.amp-mode .amp{display:block}
 .amp-case{padding:14px;border-radius:18px;
-  --wood:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='800' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.003 0.09' numOctaves='3' seed='7' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.9 -0.3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-  --grain:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.5 0 0 0 0 0.5 0 0 0 0 0.5 0 0 0 0.09 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E");
   background:var(--wood),linear-gradient(180deg,#8a5129,#6a3a1a 55%,#4a260f);
   box-shadow:0 18px 40px rgba(0,0,0,.35),inset 0 2px 0 rgba(255,255,255,.18),inset 0 -3px 0 rgba(0,0,0,.35)}
 .amp-face{border-radius:8px;padding:18px 22px 22px;color:#2a2a2a;
@@ -108,8 +107,41 @@ body.amp-mode .amp{display:block}
 .hw svg{width:20px;height:20px;fill:none;stroke:#444;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .hw:focus-visible,.power:focus-visible,.nudge:focus-visible{outline:3px solid #ff8a3d;outline-offset:3px}
 
-body.amp-mode.amp-dark{background:radial-gradient(ellipse at 50% 30%,#2a2c31,#0e0f11 70%)}
-body.amp-mode.amp-light{background:radial-gradient(ellipse at 50% 30%,#ffffff,#e4e6ea 70%)}
+/* ---------- Scena za tunerem: ściana, światło i drewniany blat ---------- */
+.scene{display:none;position:fixed;inset:0;z-index:-1;overflow:hidden;pointer-events:none}
+body.amp-mode .scene{display:block}
+.scene .wall{position:absolute;inset:0;background:var(--grain),linear-gradient(180deg,#e9dfcf,#d8cab3 70%,#cbb99c)}
+.scene .light{position:absolute;inset:0}
+.scene .rail{position:absolute;left:0;right:0;bottom:var(--table);height:10px;background:linear-gradient(180deg,rgba(255,255,255,.35),rgba(0,0,0,.08));box-shadow:0 -1px 0 rgba(0,0,0,.06)}
+.scene .table{position:absolute;left:0;right:0;bottom:0;height:var(--table);
+  background:linear-gradient(180deg,rgba(255,255,255,.18),rgba(0,0,0,0) 12%,rgba(0,0,0,.35)),var(--wood),linear-gradient(180deg,#9a6236,#7a4824 60%,#5c3418);
+  background-size:100% 100%,100% 100%,100% 100%;background-repeat:no-repeat;
+  box-shadow:inset 0 3px 0 rgba(255,255,255,.25),inset 0 6px 14px rgba(0,0,0,.25)}
+.scene .table::before{content:"";position:absolute;left:0;right:0;top:0;height:14px;background:linear-gradient(180deg,rgba(255,255,255,.25),rgba(0,0,0,.15))}
+.scene .plant{position:absolute;bottom:calc(var(--table) - 18px);left:calc(50% - 484px - 175px);width:150px;height:260px}
+/* dzień: miękkie światło z okna */
+.amp-light .scene .light{background:
+  linear-gradient(115deg,transparent 18%,rgba(255,248,225,.55) 24%,rgba(255,248,225,.55) 33%,transparent 39%),
+  linear-gradient(115deg,transparent 41%,rgba(255,248,225,.4) 45%,rgba(255,248,225,.4) 52%,transparent 56%),
+  radial-gradient(ellipse at 15% 0%,rgba(255,255,255,.7),transparent 55%)}
+/* wieczór: ciemna ściana i ciepła lampa */
+.amp-dark .scene .wall{background:var(--grain),linear-gradient(180deg,#2b2420,#1d1815 70%,#15110f)}
+.amp-dark .scene .light{background:
+  radial-gradient(ellipse 45% 55% at 82% 28%,rgba(255,176,90,.38),rgba(255,140,60,.12) 50%,transparent 75%),
+  radial-gradient(ellipse 70% 40% at 50% 100%,rgba(255,160,80,.12),transparent 70%)}
+.amp-dark .scene .rail{background:linear-gradient(180deg,rgba(255,255,255,.06),rgba(0,0,0,.3))}
+.amp-dark .scene .table{background:linear-gradient(180deg,rgba(255,190,120,.12),rgba(0,0,0,0) 15%,rgba(0,0,0,.55)),var(--wood),linear-gradient(180deg,#5a341c,#3d2211 60%,#25140a);background-size:100% 100%;background-repeat:no-repeat}
+.scene .lamp{display:none;position:absolute;right:calc(50% - 484px - 150px);bottom:calc(var(--table) - 14px);width:120px;height:330px}
+.amp-dark .scene .lamp{display:block}
+/* tuner stoi na blacie */
+body.amp-mode{--table:28vh}
+body.amp-mode .amp{padding-bottom:calc(var(--table) - 40px);position:relative}
+body.amp-mode .amp-case{position:relative}
+body.amp-mode .amp-case::after{content:"";position:absolute;left:4%;right:4%;bottom:-26px;height:36px;z-index:-1;border-radius:50%;
+  background:radial-gradient(ellipse at center,rgba(0,0,0,.45),transparent 70%)}
+@media (max-width:1320px){ .scene .plant{left:8px} .scene .lamp{right:8px} }
+@media (max-width:1180px){ .scene .plant,.scene .lamp{display:none!important} }
+@media (max-width:720px){ body.amp-mode{--table:16vh} }
 /* Ciemna obudowa */
 .amp.dark .amp-case{background:var(--wood),linear-gradient(180deg,#432818,#2b170c 55%,#1a0d06)}
 .amp.dark .amp-face{
@@ -264,6 +296,27 @@ body:not(.amp-on) .dial-glass{opacity:.25}
 </header>
 
 
+<div class="scene" aria-hidden="true">
+  <div class="wall"></div><div class="light"></div><div class="rail"></div>
+  <svg class="plant" viewBox="0 0 150 260">
+    <path d="M40 200h70l-8 58H48z" fill="#b5633a"/><path d="M36 196h78v12H36z" fill="#c8754a"/>
+    <g fill="none" stroke-linecap="round">
+      <path d="M75 198C70 150 40 120 18 104" stroke="#3f7a3a" stroke-width="3"/>
+      <path d="M75 198c4-60 30-96 58-112" stroke="#3f7a3a" stroke-width="3"/>
+      <path d="M75 198c-2-60-6-110 2-160" stroke="#3f7a3a" stroke-width="3"/>
+    </g>
+    <g fill="#4f9a48"><ellipse cx="22" cy="104" rx="24" ry="10" transform="rotate(-25 22 104)"/><ellipse cx="44" cy="140" rx="22" ry="9" transform="rotate(-40 44 140)"/>
+      <ellipse cx="128" cy="88" rx="24" ry="10" transform="rotate(30 128 88)"/><ellipse cx="104" cy="128" rx="22" ry="9" transform="rotate(45 104 128)"/>
+      <ellipse cx="78" cy="40" rx="11" ry="26"/><ellipse cx="62" cy="86" rx="9" ry="22" transform="rotate(-20 62 86)"/><ellipse cx="92" cy="74" rx="9" ry="22" transform="rotate(25 92 74)"/></g>
+    <g fill="#3f7a3a" opacity=".5"><ellipse cx="60" cy="168" rx="18" ry="7" transform="rotate(-30 60 168)"/><ellipse cx="92" cy="160" rx="18" ry="7" transform="rotate(35 92 160)"/></g>
+  </svg>
+  <svg class="lamp" viewBox="0 0 120 330">
+    <defs><radialGradient id="lg" cx="50%" cy="80%" r="70%"><stop offset="0" stop-color="#ffe2b0"/><stop offset="1" stop-color="#e09a4a"/></radialGradient></defs>
+    <path d="M60 110v200" stroke="#2a2a2a" stroke-width="5"/><ellipse cx="60" cy="318" rx="36" ry="9" fill="#1a1a1a"/>
+    <path d="M22 110h76L84 30H36z" fill="url(#lg)"/><path d="M22 110h76" stroke="#c98a40" stroke-width="2"/>
+  </svg>
+  <div class="table"></div>
+</div>
 <section class="amp" id="amp" aria-label="Widok wzmacniacza">
   <div class="amp-case">
     <div class="amp-face">
