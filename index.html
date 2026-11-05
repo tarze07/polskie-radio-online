@@ -570,12 +570,12 @@ function stopHls(){ if (hls){ hls.destroy(); hls = null; } }
 let wantPlay = false;        // czy użytkownik chce, żeby radio grało
 let everPlayed = false;      // czy bieżąca stacja zagrała choć raz od kliknięcia
 let retry = 0, retryT = null, curUrl = "";
-let quietUntil = 0;
+let quietUntil = 0, lastWhy = "";
 let pendingAlt = null;       // znaleziony zapasowy strumień — zapamiętamy go dopiero, gdy zagra
 const MAX_RETRY = 12;
 
 function load(url){
-  quietUntil = performance.now() + 800;   // zdarzenia "pause" wywołane zmianą źródła ignorujemy
+  quietUntil = performance.now() + 1500;   // zdarzenia "pause" wywołane zmianą źródła ignorujemy
   stopHls();
   audio.removeAttribute("src");
   curUrl = url;
@@ -586,7 +586,7 @@ function load(url){
     hls.on(Hls.Events.ERROR, (_, d) => {
       if (!d.fatal) return;                                   // drobne błędy hls.js naprawia sam
       if (d.type === Hls.ErrorTypes.MEDIA_ERROR && !mediaFix){ mediaFix = true; hls.recoverMediaError(); }
-      else reconnect();
+      else reconnect("błąd HLS: " + (d.details || d.type));
     });
     hls.loadSource(url);
     hls.attachMedia(audio);
@@ -606,8 +606,8 @@ async function play(s){
   render();
   if ("mediaSession" in navigator) navigator.mediaSession.metadata = new MediaMetadata({title: s.name, artist: s.genre});
   const url = cachedUrl(s) || s.url;
-  if (!url){ reconnect(); return; }
-  try { await load(url); } catch(e){ if (e.name !== "AbortError" && current === s) reconnect(); }
+  if (!url){ reconnect("brak adresu"); return; }
+  try { await load(url); } catch(e){ if (e.name !== "AbortError" && current === s) reconnect("nie można odtworzyć: " + e.name); }
 }
 
 // Pamięć znalezionych strumieni: {url, name} (starsze wpisy to sam adres)
@@ -637,7 +637,7 @@ async function findAlternative(s, exclude){
 
 // Ponowne łączenie: rosnące odstępy (1, 2, 4, 8, 16, 30 s), co trzecia próba
 // (i od razu, gdy stacja w ogóle nie ruszyła) z innym strumieniem z katalogu.
-function reconnect(){
+function reconnect(why = ""){
   const s = current;
   if (!wantPlay || !s || retryT) return;
   if (retry >= MAX_RETRY){
@@ -651,7 +651,8 @@ function reconnect(){
   const first = !everPlayed && retry === 1;
   const useAlt = first || retry % 3 === 0 || !(cachedUrl(s) || s.url);
   const delay = first ? 0 : Math.min(30000, 1000 * 2 ** (retry - 1));
-  if (delay) setStatus(`Utracono połączenie — ponawiam za ${Math.round(delay / 1000)} s (próba ${retry})`);
+  lastWhy = why;
+  if (delay) setStatus(`Utracono połączenie${why ? " (" + why + ")" : ""} — ponawiam za ${Math.round(delay / 1000)} s, próba ${retry}`);
   retryT = setTimeout(async () => {
     retryT = null;
     if (!wantPlay || current !== s) return;
@@ -663,9 +664,9 @@ function reconnect(){
     }
     // zwykłe próby na przemian: zapamiętany adres i oryginalny adres stacji
     url = url || (retry % 2 ? (cachedUrl(s) || s.url) : (s.url || cachedUrl(s)));
-    if (!url){ reconnect(); return; }
+    if (!url){ reconnect("brak adresu"); return; }
     setStatus(everPlayed ? "Ponowne łączenie…" : "Łączenie…");
-    try { await load(url); } catch(e){ if (e.name !== "AbortError" && current === s) reconnect(); }
+    try { await load(url); } catch(e){ if (e.name !== "AbortError" && current === s) reconnect("nie można odtworzyć: " + e.name); }
   }, delay);
 }
 
@@ -698,8 +699,17 @@ audio.addEventListener("pause", () => {
   setStatus("Wstrzymano");
 });
 audio.addEventListener("waiting", () => { if (wantPlay) setStatus("Buforowanie…"); });
-audio.addEventListener("error",   () => { if (audio.getAttribute("src")) reconnect(); });
-audio.addEventListener("ended",   () => reconnect());           // strumień na żywo nie powinien się kończyć
+// Błędy i koniec strumienia bierzemy pod uwagę tylko dla bieżącego źródła — zdarzenia,
+// które przeglądarka zgłasza z opóźnieniem po przełączeniu źródła, pomijamy (inaczej mogły się zapętlać).
+const ERR = {1: "przerwano", 2: "błąd sieci", 3: "błąd dekodowania", 4: "nieobsługiwany format"};
+audio.addEventListener("error", () => {
+  if (!audio.error || performance.now() < quietUntil || !audio.getAttribute("src")) return;
+  reconnect(ERR[audio.error.code] || "błąd odtwarzania");
+});
+audio.addEventListener("ended", () => {
+  if (performance.now() < quietUntil || !everPlayed) return;
+  reconnect("serwer zakończył strumień");                     // strumień na żywo nie powinien się kończyć
+});
 // Strażnik zawieszonego strumienia. Sprawdza co 3 s, czy dźwięk posuwa się do przodu.
 // Jeśli przeglądarka wstrzymała skrypty (karta w tle, zablokowany ekran, uśpiony komputer),
 // przerwa między sprawdzeniami jest długa — wtedy niczego nie oceniamy, bo radio mogło grać.
@@ -713,7 +723,7 @@ setInterval(() => {
   if (++wdStuck >= (everPlayed ? 8 : 10)){
     wdStuck = 0;
     stopHls(); audio.removeAttribute("src");
-    reconnect();
+    reconnect("brak danych");
   }
 }, 3000);
 const healthy = () => !audio.paused && audio.readyState >= 3 && wdStuck === 0;
@@ -726,11 +736,11 @@ addEventListener("online", () => {
   clearTimeout(retryT); retryT = null;
   retry = Math.min(retry, 1);
   setStatus("Sieć wróciła — łączę…");
-  reconnect();
+  reconnect("powrót sieci");
 });
 addEventListener("offline", () => { if (wantPlay && !healthy()) setStatus("Brak internetu — wznowię po powrocie sieci"); });
 document.addEventListener("visibilitychange", () => {
-  if (document.visibilityState === "visible" && wantPlay && current && audio.paused && !retryT) reconnect();
+  if (document.visibilityState === "visible" && wantPlay && current && audio.paused && !retryT) reconnect("wznowienie karty");
 });
 
 if ("mediaSession" in navigator){
