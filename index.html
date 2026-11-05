@@ -429,7 +429,7 @@ const STATIONS = [
 
 const $ = s => document.querySelector(s);
 const audio = $("#audio"), list = $("#list"), playBtn = $("#play");
-let current = null, hls = null, triedFallback = false;
+let current = null, hls = null;
 const store = {
   get(k, d){ try { return JSON.parse(localStorage.getItem(k)) ?? d } catch { return d } },
   set(k, v){ try { localStorage.setItem(k, JSON.stringify(v)) } catch {} }
@@ -566,12 +566,28 @@ function setStatus(text, live){
 
 function stopHls(){ if (hls){ hls.destroy(); hls = null; } }
 
+// ---------- Odtwarzanie z automatycznym wznawianiem połączenia ----------
+let wantPlay = false;        // czy użytkownik chce, żeby radio grało
+let everPlayed = false;      // czy bieżąca stacja zagrała choć raz od kliknięcia
+let retry = 0, retryT = null, curUrl = "";
+let lastProg = 0, lastPos = -1, quietUntil = 0;
+let pendingAlt = null;       // znaleziony zapasowy strumień — zapamiętamy go dopiero, gdy zagra
+const MAX_RETRY = 12;
+
 function load(url){
+  quietUntil = performance.now() + 800;   // zdarzenia "pause" wywołane zmianą źródła ignorujemy
   stopHls();
   audio.removeAttribute("src");
+  curUrl = url;
+  lastProg = performance.now(); lastPos = -1;
   if (/\.m3u8(\?|$)/i.test(url) && !audio.canPlayType("application/vnd.apple.mpegurl") && window.Hls?.isSupported()){
-    hls = new Hls();
-    hls.on(Hls.Events.ERROR, (_, d) => { if (d.fatal) onFail(); });
+    hls = new Hls({manifestLoadingMaxRetry: 4, levelLoadingMaxRetry: 4, fragLoadingMaxRetry: 6});
+    let mediaFix = false;
+    hls.on(Hls.Events.ERROR, (_, d) => {
+      if (!d.fatal) return;                                   // drobne błędy hls.js naprawia sam
+      if (d.type === Hls.ErrorTypes.MEDIA_ERROR && !mediaFix){ mediaFix = true; hls.recoverMediaError(); }
+      else reconnect();
+    });
     hls.loadSource(url);
     hls.attachMedia(audio);
   } else {
@@ -581,7 +597,8 @@ function load(url){
 }
 
 async function play(s){
-  current = s; triedFallback = false;
+  clearTimeout(retryT); retryT = null;
+  current = s; wantPlay = true; everPlayed = false; retry = 0;
   saveSettings();
   showName(s);
   playBtn.disabled = false;
@@ -589,8 +606,8 @@ async function play(s){
   render();
   if ("mediaSession" in navigator) navigator.mediaSession.metadata = new MediaMetadata({title: s.name, artist: s.genre});
   const url = cachedUrl(s) || s.url;
-  if (!url){ onFail(); return; }
-  try { await load(url); } catch(e){ if (e.name !== "AbortError") onFail(); }
+  if (!url){ reconnect(); return; }
+  try { await load(url); } catch(e){ if (e.name !== "AbortError" && current === s) reconnect(); }
 }
 
 // Pamięć znalezionych strumieni: {url, name} (starsze wpisy to sam adres)
@@ -601,29 +618,61 @@ function showName(s){
   $("#nowName").textContent = n ? `${s.name} · ${n}` : s.name;
 }
 
-// Gdy podstawowy adres nie działa — szukamy aktualnego strumienia w katalogu Radio Browser
-async function onFail(){
-  const s = current;
-  if (!s) return;
-  if (triedFallback){ setStatus("Nie udało się połączyć ze stacją"); return; }
-  triedFallback = true;
-  setStatus(s.url || cachedUrl(s) ? "Szukam alternatywnego strumienia…" : "Wyszukiwanie stacji…");
+// Szuka innego działającego strumienia stacji w katalogu Radio Browser
+async function findAlternative(s, exclude){
+  const search = async extra => {
+    const r = await fetch("https://all.api.radio-browser.info/json/stations/search?" + new URLSearchParams({
+      ...extra, hidebroken: "true", order: "clickcount", reverse: "true", limit: "15"}));
+    return (await r.json()).find(x => x.url_resolved?.startsWith("https://") && x.url_resolved !== exclude);
+  };
   try {
-    const search = async extra => {
-      const r = await fetch("https://all.api.radio-browser.info/json/stations/search?" + new URLSearchParams({
-        ...extra, hidebroken: "true", order: "clickcount", reverse: "true", limit: "15"}));
-      const old = cachedUrl(s);
-      return (await r.json()).find(x => x.url_resolved?.startsWith("https://") && x.url_resolved !== old);
-    };
     const found = s.tag
       ? (await search({tag: s.tag, countrycode: "PL"})) || (await search({tag: s.tag}))
       : await search({name: s.q || s.name, countrycode: "PL"});
-    if (!found || current !== s) throw 0;
-    urlCache[s.id] = {url: found.url_resolved, name: found.name.trim()};
-    store.set("urlCache", urlCache);
-    showName(s);
-    await load(found.url_resolved);
-  } catch(e){ if (current === s) setStatus("Nie udało się połączyć ze stacją"); }
+    if (!found) return null;
+    pendingAlt = {id: s.id, url: found.url_resolved, name: found.name.trim()};
+    return found.url_resolved;
+  } catch { return null; }
+}
+
+// Ponowne łączenie: rosnące odstępy (1, 2, 4, 8, 16, 30 s), co trzecia próba
+// (i od razu, gdy stacja w ogóle nie ruszyła) z innym strumieniem z katalogu.
+function reconnect(){
+  const s = current;
+  if (!wantPlay || !s || retryT) return;
+  if (retry >= MAX_RETRY){
+    wantPlay = false; stopHls(); audio.removeAttribute("src");
+    setStatus("Nie udało się połączyć — kliknij ▶, aby spróbować ponownie");
+    setPlayIcon(false);
+    return;
+  }
+  if (!navigator.onLine){ setStatus("Brak internetu — wznowię po powrocie sieci"); return; }
+  retry++;
+  const first = !everPlayed && retry === 1;
+  const useAlt = first || retry % 3 === 0 || !(cachedUrl(s) || s.url);
+  const delay = first ? 0 : Math.min(30000, 1000 * 2 ** (retry - 1));
+  if (delay) setStatus(`Utracono połączenie — ponawiam za ${Math.round(delay / 1000)} s (próba ${retry})`);
+  retryT = setTimeout(async () => {
+    retryT = null;
+    if (!wantPlay || current !== s) return;
+    let url = null;
+    if (useAlt){
+      setStatus(s.url || cachedUrl(s) ? "Szukam alternatywnego strumienia…" : "Wyszukiwanie stacji…");
+      url = await findAlternative(s, curUrl);
+      if (!wantPlay || current !== s) return;
+    }
+    // zwykłe próby na przemian: zapamiętany adres i oryginalny adres stacji
+    url = url || (retry % 2 ? (cachedUrl(s) || s.url) : (s.url || cachedUrl(s)));
+    if (!url){ reconnect(); return; }
+    setStatus(everPlayed ? "Ponowne łączenie…" : "Łączenie…");
+    try { await load(url); } catch(e){ if (e.name !== "AbortError" && current === s) reconnect(); }
+  }, delay);
+}
+
+function stopPlayback(){
+  wantPlay = false;
+  clearTimeout(retryT); retryT = null;
+  audio.pause(); stopHls();
 }
 
 function setPlayIcon(on){
@@ -632,15 +681,59 @@ function setPlayIcon(on){
   document.body.classList.toggle("playing", on);
   if (window.ampSync) ampSync();
 }
-audio.addEventListener("playing", () => { setStatus("Na żywo", true); setPlayIcon(true); });
-audio.addEventListener("pause",   () => { setStatus("Wstrzymano"); setPlayIcon(false); });
-audio.addEventListener("waiting", () => setStatus("Buforowanie…"));
-audio.addEventListener("error",   () => { if (audio.getAttribute("src")) onFail(); });
+audio.addEventListener("playing", () => {
+  if (pendingAlt && pendingAlt.url === curUrl){
+    urlCache[pendingAlt.id] = {url: pendingAlt.url, name: pendingAlt.name};
+    store.set("urlCache", urlCache);
+    if (current?.id === pendingAlt.id) showName(current);
+    pendingAlt = null;
+  }
+  everPlayed = true; retry = 0; lastProg = performance.now(); setStatus("Na żywo", true); setPlayIcon(true); });
+audio.addEventListener("pause", () => {
+  setPlayIcon(false);
+  if (performance.now() < quietUntil || retryT || audio.ended || audio.error) return;   // koniec/błąd strumienia to nie pauza
+  // pauza z systemu (słuchawki, telefon, przyciski multimediów) — szanujemy ją
+  wantPlay = false; clearTimeout(retryT); retryT = null;
+  setStatus("Wstrzymano");
+});
+audio.addEventListener("waiting", () => { if (wantPlay) setStatus("Buforowanie…"); });
+audio.addEventListener("error",   () => { if (audio.getAttribute("src")) reconnect(); });
+audio.addEventListener("ended",   () => reconnect());           // strumień na żywo nie powinien się kończyć
+audio.addEventListener("timeupdate", () => {
+  if (audio.currentTime !== lastPos){ lastPos = audio.currentTime; lastProg = performance.now(); }
+});
+
+// Strażnik: jeśli dźwięk stoi w miejscu dłużej niż 15 s, łączymy od nowa
+setInterval(() => {
+  if (!wantPlay || !current || retryT) return;
+  if (performance.now() - lastProg > 15000){
+    lastProg = performance.now();
+    stopHls(); audio.removeAttribute("src");
+    reconnect();
+  }
+}, 3000);
+
+// Powrót sieci lub powrót do karty — wznawiamy od razu
+addEventListener("online", () => {
+  if (!wantPlay || !current) return;
+  clearTimeout(retryT); retryT = null; retry = 0; everPlayed = true;
+  setStatus("Sieć wróciła — łączę…");
+  play(current);
+});
+addEventListener("offline", () => { if (wantPlay) setStatus("Brak internetu — wznowię po powrocie sieci"); });
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible" && wantPlay && current && audio.paused && !retryT) reconnect();
+});
+
+if ("mediaSession" in navigator){
+  navigator.mediaSession.setActionHandler("play", () => { if (current) play(current); });
+  navigator.mediaSession.setActionHandler("pause", () => stopPlayback());
+}
 
 playBtn.onclick = () => {
   if (!current) return;
-  if (audio.paused) play(current); // ponowne połączenie = zawsze na żywo
-  else { audio.pause(); stopHls(); }
+  if (wantPlay) stopPlayback();   // pauza (także w trakcie ponownego łączenia)
+  else play(current);             // ponowne połączenie = zawsze na żywo
 };
 
 const vol = $("#vol");
