@@ -570,7 +570,7 @@ function stopHls(){ if (hls){ hls.destroy(); hls = null; } }
 let wantPlay = false;        // czy użytkownik chce, żeby radio grało
 let everPlayed = false;      // czy bieżąca stacja zagrała choć raz od kliknięcia
 let retry = 0, retryT = null, curUrl = "";
-let lastProg = 0, lastPos = -1, quietUntil = 0;
+let quietUntil = 0;
 let pendingAlt = null;       // znaleziony zapasowy strumień — zapamiętamy go dopiero, gdy zagra
 const MAX_RETRY = 12;
 
@@ -579,7 +579,7 @@ function load(url){
   stopHls();
   audio.removeAttribute("src");
   curUrl = url;
-  lastProg = performance.now(); lastPos = -1;
+  wdStuck = 0; wdPos = -1;
   if (/\.m3u8(\?|$)/i.test(url) && !audio.canPlayType("application/vnd.apple.mpegurl") && window.Hls?.isSupported()){
     hls = new Hls({manifestLoadingMaxRetry: 4, levelLoadingMaxRetry: 4, fragLoadingMaxRetry: 6});
     let mediaFix = false;
@@ -682,13 +682,14 @@ function setPlayIcon(on){
   if (window.ampSync) ampSync();
 }
 audio.addEventListener("playing", () => {
+  wdStuck = 0;
   if (pendingAlt && pendingAlt.url === curUrl){
     urlCache[pendingAlt.id] = {url: pendingAlt.url, name: pendingAlt.name};
     store.set("urlCache", urlCache);
     if (current?.id === pendingAlt.id) showName(current);
     pendingAlt = null;
   }
-  everPlayed = true; retry = 0; lastProg = performance.now(); setStatus("Na żywo", true); setPlayIcon(true); });
+  everPlayed = true; retry = 0; setStatus("Na żywo", true); setPlayIcon(true); });
 audio.addEventListener("pause", () => {
   setPlayIcon(false);
   if (performance.now() < quietUntil || retryT || audio.ended || audio.error) return;   // koniec/błąd strumienia to nie pauza
@@ -699,28 +700,35 @@ audio.addEventListener("pause", () => {
 audio.addEventListener("waiting", () => { if (wantPlay) setStatus("Buforowanie…"); });
 audio.addEventListener("error",   () => { if (audio.getAttribute("src")) reconnect(); });
 audio.addEventListener("ended",   () => reconnect());           // strumień na żywo nie powinien się kończyć
-audio.addEventListener("timeupdate", () => {
-  if (audio.currentTime !== lastPos){ lastPos = audio.currentTime; lastProg = performance.now(); }
-});
-
-// Strażnik: jeśli dźwięk stoi w miejscu dłużej niż 15 s, łączymy od nowa
+// Strażnik zawieszonego strumienia. Sprawdza co 3 s, czy dźwięk posuwa się do przodu.
+// Jeśli przeglądarka wstrzymała skrypty (karta w tle, zablokowany ekran, uśpiony komputer),
+// przerwa między sprawdzeniami jest długa — wtedy niczego nie oceniamy, bo radio mogło grać.
+// Reagujemy dopiero po ok. 24 s (przed pierwszym startem po 30 s) ciągłego braku postępu.
+let wdLast = performance.now(), wdPos = -1, wdStuck = 0;
 setInterval(() => {
-  if (!wantPlay || !current || retryT) return;
-  if (performance.now() - lastProg > 15000){
-    lastProg = performance.now();
+  const now = performance.now(), gap = now - wdLast;
+  wdLast = now;
+  if (!wantPlay || !current || retryT || gap > 6000){ wdStuck = 0; wdPos = audio.currentTime; return; }
+  if (audio.currentTime !== wdPos){ wdPos = audio.currentTime; wdStuck = 0; return; }
+  if (++wdStuck >= (everPlayed ? 8 : 10)){
+    wdStuck = 0;
     stopHls(); audio.removeAttribute("src");
     reconnect();
   }
 }, 3000);
+const healthy = () => !audio.paused && audio.readyState >= 3 && wdStuck === 0;
 
 // Powrót sieci lub powrót do karty — wznawiamy od razu
+// Powrót sieci: łączymy od razu tylko wtedy, gdy radio faktycznie nie gra
+// (przeglądarki zgłaszają to zdarzenie także przy zmianie Wi-Fi, VPN czy wybudzeniu).
 addEventListener("online", () => {
-  if (!wantPlay || !current) return;
-  clearTimeout(retryT); retryT = null; retry = 0; everPlayed = true;
+  if (!wantPlay || !current || healthy()) return;
+  clearTimeout(retryT); retryT = null;
+  retry = Math.min(retry, 1);
   setStatus("Sieć wróciła — łączę…");
-  play(current);
+  reconnect();
 });
-addEventListener("offline", () => { if (wantPlay) setStatus("Brak internetu — wznowię po powrocie sieci"); });
+addEventListener("offline", () => { if (wantPlay && !healthy()) setStatus("Brak internetu — wznowię po powrocie sieci"); });
 document.addEventListener("visibilitychange", () => {
   if (document.visibilityState === "visible" && wantPlay && current && audio.paused && !retryT) reconnect();
 });
