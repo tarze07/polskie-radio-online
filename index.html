@@ -201,6 +201,8 @@ body.amp-mode .amp-case::after{content:"";position:absolute;left:4%;right:4%;bot
 .lamp::before{content:"";display:block;width:10px;height:10px;border-radius:50%;background:#5b1a12;box-shadow:inset 0 1px 2px rgba(0,0,0,.6)}
 .lamp.on::before{background:#ff3b1f;box-shadow:0 0 8px 2px rgba(255,70,30,.8),inset 0 -1px 2px rgba(0,0,0,.3)}
 .lamp.green.on::before{background:#46ff6e;box-shadow:0 0 8px 2px rgba(70,255,110,.7)}
+.lamp.blue::before{background:#0f2a4a}
+.lamp.blue.on::before{background:#3aa0ff;box-shadow:0 0 8px 2px rgba(60,160,255,.75)}
 .amp-mid{display:grid;grid-template-columns:1fr 1.5fr 1fr;gap:16px;align-items:stretch}
 .vu{display:flex;align-items:center;border-radius:6px;padding:6px;background:#1b1b1b;box-shadow:inset 0 2px 6px rgba(0,0,0,.8),0 1px 0 #fff}
 .vu svg{display:block;width:100%;height:auto;border-radius:3px}
@@ -340,6 +342,7 @@ body:not(.amp-on) .dial-glass{opacity:.25}
           <span class="lamp" id="lampPow" title="Zasilanie"></span>
           <span class="lamp green" id="lampSt" title="Stereo"></span>
           <span class="lamp" id="lampAir" title="Na antenie"></span>
+          <span class="lamp blue" id="lampAna" title="Wskaźniki: symulacja"></span>
         </div>
       </div>
       <div class="amp-mid">
@@ -384,6 +387,7 @@ body:not(.amp-on) .dial-glass{opacity:.25}
 </div>
 <div class="toast" id="toast" role="status"></div>
 <audio id="audio" preload="none"></audio>
+<audio id="audioA" preload="none" crossorigin="anonymous"></audio>
 
 <script>
 const STATIONS = [
@@ -428,7 +432,10 @@ const STATIONS = [
 ];
 
 const $ = s => document.querySelector(s);
-const audio = $("#audio"), list = $("#list"), playBtn = $("#play");
+const audioP = $("#audio"), audioA = $("#audioA"), list = $("#list"), playBtn = $("#play");
+let audio = audioP;   // element, który właśnie gra (zwykły albo analizowany)
+// zdarzenia obu elementów; reagujemy tylko na ten, który gra
+const onAudio = (type, fn) => [audioP, audioA].forEach(el => el.addEventListener(type, e => { if (e.target === audio) fn(e); }));
 let current = null, hls = null;
 const store = {
   get(k, d){ try { return JSON.parse(localStorage.getItem(k)) ?? d } catch { return d } },
@@ -574,13 +581,64 @@ let quietUntil = 0, lastWhy = "";
 let pendingAlt = null;       // znaleziony zapasowy strumień — zapamiętamy go dopiero, gdy zagra
 const MAX_RETRY = 12;
 
-function load(url){
+// ---------- Analiza dźwięku (Web Audio) ----------
+// Przeglądarka pozwala analizować tylko dźwięk, na który serwer wyraził zgodę (CORS),
+// a próba analizy cudzego strumienia bez zgody WYCISZA go. Dlatego:
+//  • strumienie HLS (Polskie Radio) idą przez hls.js — dane i tak pobierane są za zgodą serwera,
+//  • strumienie MP3 najpierw krótko sprawdzamy (czy serwer pozwala) i wynik zapamiętujemy,
+//  • w każdym innym przypadku gra zwykły element <audio> bez analizy (wskaźniki — symulacja).
+let ctx = null, anL = null, anR = null, forcePlain = false;
+const corsCache = store.get("corsOk", {});
+function ensureCtx(){
+  if (ctx) { if (ctx.state === "suspended") ctx.resume().catch(() => {}); return; }
+  try {
+    ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const src = ctx.createMediaElementSource(audioA);
+    const split = ctx.createChannelSplitter(2);
+    anL = ctx.createAnalyser(); anR = ctx.createAnalyser();
+    for (const an of [anL, anR]){ an.fftSize = 2048; an.smoothingTimeConstant = .55; an.minDecibels = -85; an.maxDecibels = -20; }
+    src.connect(ctx.destination);
+    src.connect(split); split.connect(anL, 0); split.connect(anR, 1);
+    // gdy system zatrzyma silnik dźwięku (np. blokada ekranu w telefonie), przechodzimy na zwykły element
+    ctx.onstatechange = () => {
+      if (ctx.state !== "running" && audio === audioA && wantPlay && current){ forcePlain = true; load(curUrl).catch(() => {}); }
+    };
+  } catch { ctx = null; }
+}
+const ctxReady = async () => {
+  if (!ctx) return false;
+  if (ctx.state !== "running") await Promise.race([ctx.resume().catch(() => {}), new Promise(r => setTimeout(r, 400))]);
+  return ctx.state === "running";
+};
+async function corsOk(url){
+  if (url in corsCache) return corsCache[url];
+  const ac = new AbortController(), t = setTimeout(() => ac.abort(), 4000);
+  let ok = false;
+  try { const r = await fetch(url, {mode: "cors", signal: ac.signal, cache: "no-store"}); ok = r.ok; } catch {}
+  clearTimeout(t); ac.abort();
+  corsCache[url] = ok; store.set("corsOk", corsCache);
+  return ok;
+}
+window.analysisOn = () => audio === audioA && !!ctx && ctx.state === "running";
+
+function useEl(el){
+  const other = el === audioP ? audioA : audioP;
+  other.pause(); other.removeAttribute("src"); other.load();
+  audio = el;
+}
+
+async function load(url){
   quietUntil = performance.now() + 1500;   // zdarzenia "pause" wywołane zmianą źródła ignorujemy
   stopHls();
-  audio.removeAttribute("src");
+  audioP.removeAttribute("src"); audioA.removeAttribute("src");
   curUrl = url;
   wdStuck = 0; wdPos = -1;
-  if (/\.m3u8(\?|$)/i.test(url) && !audio.canPlayType("application/vnd.apple.mpegurl") && window.Hls?.isSupported()){
+  const viaHls = /\.m3u8(\?|$)/i.test(url) && window.Hls?.isSupported() &&
+                 !(audioP.canPlayType("application/vnd.apple.mpegurl") && !ctx);
+  const analyse = !forcePlain && await ctxReady() && (viaHls || await corsOk(url));
+  if (url !== curUrl) throw new DOMException("zmiana źródła", "AbortError");
+  useEl(analyse ? audioA : audioP);
+  if (viaHls){
     hls = new Hls({manifestLoadingMaxRetry: 4, levelLoadingMaxRetry: 4, fragLoadingMaxRetry: 6});
     let mediaFix = false;
     hls.on(Hls.Events.ERROR, (_, d) => {
@@ -590,15 +648,26 @@ function load(url){
     });
     hls.loadSource(url);
     hls.attachMedia(audio);
+  } else if (/\.m3u8(\?|$)/i.test(url) || !analyse){
+    audio.src = url;
   } else {
     audio.src = url;
+    try { return await audio.play(); }
+    catch (e){
+      if (e.name === "AbortError" || url !== curUrl) throw e;
+      // serwer jednak nie pozwolił na analizę — gramy ten sam strumień zwykłym elementem
+      corsCache[url] = false; store.set("corsOk", corsCache);
+      quietUntil = performance.now() + 1500;
+      useEl(audioP); audio.src = url;
+    }
   }
   return audio.play();
 }
 
 async function play(s){
   clearTimeout(retryT); retryT = null;
-  current = s; wantPlay = true; everPlayed = false; retry = 0;
+  current = s; wantPlay = true; everPlayed = false; retry = 0; forcePlain = false;
+  ensureCtx();
   saveSettings();
   showName(s);
   playBtn.disabled = false;
@@ -682,7 +751,7 @@ function setPlayIcon(on){
   document.body.classList.toggle("playing", on);
   if (window.ampSync) ampSync();
 }
-audio.addEventListener("playing", () => {
+onAudio("playing", () => {
   wdStuck = 0;
   if (pendingAlt && pendingAlt.url === curUrl){
     urlCache[pendingAlt.id] = {url: pendingAlt.url, name: pendingAlt.name};
@@ -691,22 +760,22 @@ audio.addEventListener("playing", () => {
     pendingAlt = null;
   }
   everPlayed = true; retry = 0; setStatus("Na żywo", true); setPlayIcon(true); });
-audio.addEventListener("pause", () => {
+onAudio("pause", () => {
   setPlayIcon(false);
   if (performance.now() < quietUntil || retryT || audio.ended || audio.error) return;   // koniec/błąd strumienia to nie pauza
   // pauza z systemu (słuchawki, telefon, przyciski multimediów) — szanujemy ją
   wantPlay = false; clearTimeout(retryT); retryT = null;
   setStatus("Wstrzymano");
 });
-audio.addEventListener("waiting", () => { if (wantPlay) setStatus("Buforowanie…"); });
+onAudio("waiting", () => { if (wantPlay) setStatus("Buforowanie…"); });
 // Błędy i koniec strumienia bierzemy pod uwagę tylko dla bieżącego źródła — zdarzenia,
 // które przeglądarka zgłasza z opóźnieniem po przełączeniu źródła, pomijamy (inaczej mogły się zapętlać).
 const ERR = {1: "przerwano", 2: "błąd sieci", 3: "błąd dekodowania", 4: "nieobsługiwany format"};
-audio.addEventListener("error", () => {
+onAudio("error", () => {
   if (!audio.error || performance.now() < quietUntil || !audio.getAttribute("src")) return;
   reconnect(ERR[audio.error.code] || "błąd odtwarzania");
 });
-audio.addEventListener("ended", () => {
+onAudio("ended", () => {
   if (performance.now() < quietUntil || !everPlayed) return;
   reconnect("serwer zakończył strumień");                     // strumień na żywo nie powinien się kończyć
 });
@@ -756,8 +825,8 @@ playBtn.onclick = () => {
 
 const vol = $("#vol");
 vol.value = store.get("vol", 0.8);
-audio.volume = vol.value;
-vol.oninput = () => { audio.volume = vol.value; store.set("vol", +vol.value); };
+audioP.volume = audioA.volume = vol.value;
+vol.oninput = () => { audioP.volume = audioA.volume = vol.value; store.set("vol", +vol.value); };
 
 $("#q").oninput = () => { saveSettings(); render(); };
 $("#favOnly").onclick = e => {
@@ -838,11 +907,15 @@ document.addEventListener("keydown", e => {
     $(sel).appendChild(box);
   });
   let segH = 0;
-  function drawLeds(on){
+  function drawLeds(on, bands){
     for (let ch = 0; ch < 2; ch++) ledCols[ch].forEach((c, b) => {
-      const shape = 1.05 - b * .055;                        // niskie tony mocniejsze
-      const jitter = .55 + .45 * Math.random() * Math.random() + (Math.random() < .12 ? .35 : 0);
-      const target = on ? Math.min(1, lv[ch] * shape * jitter * 1.15) : 0;
+      let target;
+      if (bands) target = on ? bands[ch][b] : 0;          // prawdziwe pasma częstotliwości
+      else {
+        const shape = 1.05 - b * .055;                      // symulacja: niskie tony mocniejsze
+        const jitter = .55 + .45 * Math.random() * Math.random() + (Math.random() < .12 ? .35 : 0);
+        target = on ? Math.min(1, lv[ch] * shape * jitter * 1.15) : 0;
+      }
       c.lv += (target - c.lv) * (target > c.lv ? .75 : .25);
       const lit = Math.round(c.lv * SEGS);
       if (lit !== c.lit){
@@ -911,6 +984,9 @@ document.addEventListener("keydown", e => {
     $("#lampPow").classList.toggle("on", on || !!statusText && /Łącz|Buf|Szuk/.test(statusText));
     $("#lampSt").classList.toggle("on", on);
     $("#lampAir").classList.toggle("on", on);
+    const real = on && window.analysisOn && analysisOn();
+    $("#lampAna").classList.toggle("on", !!real);
+    $("#lampAna").title = real ? "Wskaźniki: prawdziwa analiza dźwięku" : "Wskaźniki: symulacja (serwer stacji nie pozwala na analizę)";
     $("#power").classList.toggle("on", on);
     $("#vfdName").textContent = s ? (foundName(s) && !preview ? `${s.name} · ${foundName(s)}` : s.name) : "— — —";
     $("#vfdFreq").textContent = s ? `FM ${freqOf(s).toFixed(1)} MHz` : "FM --.- MHz";
@@ -924,6 +1000,38 @@ document.addEventListener("keydown", e => {
   let lv = [0, 0], t0 = performance.now(), kick = [0, 0], raf = null, lastT = 0, lastAng = [null, null];
   // Pętla animacji: ok. 30 klatek/s, działa tylko w widoku wzmacniacza
   // i zatrzymuje się sama, gdy radio nie gra, a wskaźniki już opadły.
+  // --- odczyt prawdziwego sygnału ---
+  const VU_PTS = [[-20,0],[-10,.2],[-7,.32],[-5,.42],[-3,.55],[-2,.62],[-1,.7],[0,.78],[1,.85],[2,.92],[3,1]];
+  const vuPos = db => {                                       // dB VU → położenie wskazówki 0..1
+    if (db <= -20) return 0;
+    for (let k = 1; k < VU_PTS.length; k++) if (db <= VU_PTS[k][0]){
+      const [d0, p0] = VU_PTS[k - 1], [d1, p1] = VU_PTS[k];
+      return p0 + (p1 - p0) * (db - d0) / (d1 - d0);
+    }
+    return 1.04;
+  };
+  let tbuf = null, fbuf = null, edges = null;
+  function readReal(){
+    if (!tbuf){
+      tbuf = new Float32Array(anL.fftSize); fbuf = new Uint8Array(anL.frequencyBinCount);
+      const hz = ctx.sampleRate / anL.fftSize;                // szerokość jednego pasma FFT
+      edges = Array.from({length: BANDS + 1}, (_, k) => Math.max(1, Math.round(40 * Math.pow(16000 / 40, k / BANDS) / hz)));
+    }
+    const vu = [], bands = [[], []];
+    [anL, anR].forEach((an, ch) => {
+      an.getFloatTimeDomainData(tbuf);
+      let sum = 0; for (let k = 0; k < tbuf.length; k++) sum += tbuf[k] * tbuf[k];
+      const rms = Math.sqrt(sum / tbuf.length);
+      vu.push(vuPos(20 * Math.log10(rms + 1e-9) + 12));       // 0 VU ≈ −12 dBFS RMS (radio jest mocno kompresowane)
+      an.getByteFrequencyData(fbuf);
+      for (let b = 0; b < BANDS; b++){
+        let m = 0; for (let k = edges[b]; k < Math.max(edges[b] + 1, edges[b + 1]); k++) m = Math.max(m, fbuf[k]);
+        bands[ch].push(Math.min(1, Math.pow(m / 255, 1.4) * 1.1));
+      }
+    });
+    return {vu, bands};
+  }
+
   function frame(t){
     raf = null;
     if (!document.body.classList.contains("amp-mode")) return;
@@ -933,19 +1041,20 @@ document.addEventListener("keydown", e => {
     const v = +$("#vol").value;
     const time = (t - t0) / 1000;
     const led = amp.classList.contains("led-mode");
+    const real = on && analysisOn() ? readReal() : null;
     for (let i = 0; i < 2; i++){
       if (Math.random() < .1) kick[i] = .15 + Math.random() * .25;
       kick[i] *= .82;
       const music = .5 + .12 * Math.sin(time * 2.1 + i) + .08 * Math.sin(time * 5.3 + i * 2) + .06 * Math.sin(time * 11.7 + i * 3) + kick[i];
-      const target = on ? Math.min(1.04, music * (.35 + .75 * v)) : 0;
-      lv[i] += (target - lv[i]) * (target > lv[i] ? .55 : .22);
+      const target = real ? real.vu[i] : on ? Math.min(1.04, music * (.35 + .75 * v)) : 0;
+      lv[i] += (target - lv[i]) * (target > lv[i] ? .55 : .22);   // balistyka wskazówki
       if (!on && lv[i] < .002) lv[i] = 0;
       if (!led){
         const a = Math.round(ang(Math.max(0, lv[i])) * 4) / 4;   // co 0,25°
         if (a !== lastAng[i]){ needles[i].style.transform = `rotate(${a}deg)`; lastAng[i] = a; }
       }
     }
-    if (led) drawLeds(on);
+    if (led) drawLeds(on, real && real.bands);
     const idle = !on && lv[0] === 0 && lv[1] === 0 && ledCols.flat().every(c => c.lit <= 0 && c.pkShown < 0);
     if (!idle) raf = requestAnimationFrame(frame);
   }
