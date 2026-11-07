@@ -3,7 +3,7 @@
 Prosta strona (jeden plik HTML) do słuchania popularnych polskich stacji radiowych:
 RMF FM, Radio ZET, Polskie Radio (Jedynka, Dwójka, Trójka, Czwórka, PR24), Eska, Eska Rock, VOX FM,
 RMF MAXX, RMF Classic, Antyradio, Chillizet, Meloradio, TOK FM, Złote Przeboje, Radio 357,
-Radio Nowy Świat, Radio Wnet i Radio Maryja,
+Radio Nowy Świat, Radio Wnet, Radio Maryja, Radio Plus,
 a także stacje muzyczne: Polskie Radio Chopin, RadioJAZZ.FM, Radio Kampus, Muzo.fm, Radio Pogoda,
 Radio Party, Polskie Radio Dzieciom oraz kanały gatunkowe (disco polo, hip-hop, metal, reggae, blues,
 elektronika, lata 80., country), dla których strumień jest wyszukiwany w katalogu Radio Browser.
